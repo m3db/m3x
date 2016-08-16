@@ -3,6 +3,8 @@ go:
   - 1.5
   - 1.6
 install:
+  - go get -v github.com/Masterminds/glide
+  - glide install
   - make install-ci
 env:
  # Set higher timeouts for Travis

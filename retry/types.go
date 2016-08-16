@@ -22,7 +22,19 @@ package xretry
 
 import (
 	"time"
+
+	"github.com/m3db/m3x/errors"
 )
+
+// RetriableError returns a retriable error
+func RetriableError(err error) error {
+	return xerrors.NewRetriableError(err)
+}
+
+// NonRetriableError returns a non-retriable error
+func NonRetriableError(err error) error {
+	return xerrors.NewNonRetriableError(err)
+}
 
 // Fn is a function that can be retried
 type Fn func() error

@@ -25,6 +25,8 @@ import (
 	"math"
 	"math/rand"
 	"time"
+
+	"github.com/m3db/m3x/errors"
 )
 
 var (
@@ -71,6 +73,9 @@ func (r *retrier) attempt(continueFn ContinueFn, fn Fn) error {
 	if err == nil {
 		return nil
 	}
+	if xerrors.IsNonRetriableError(err) {
+		return err
+	}
 
 	for i := 0; i < r.max; i++ {
 		curr := r.initialBackoff.Nanoseconds() * int64(math.Pow(r.backoffFactor, float64(i)))
@@ -88,6 +93,9 @@ func (r *retrier) attempt(continueFn ContinueFn, fn Fn) error {
 		attempt++
 		if err == nil {
 			return nil
+		}
+		if xerrors.IsNonRetriableError(err) {
+			return err
 		}
 	}
 

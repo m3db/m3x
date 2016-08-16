@@ -31,6 +31,9 @@ test-xml: test-internal
 	@$(convert-test-data) $(coverage_xml)
 	@rm $(coverfile) &> /dev/null
 
+install-ci:
+	glide update
+
 test: test-internal
 	gocov convert $(coverfile) | gocov report
 

@@ -19,8 +19,9 @@ func TestObservable(t *testing.T) {
 	p = NewObservable()
 	p.SetAndNotify(get)
 	assert.Equal(t, get, p.Get())
-	s, err := p.Subscribe()
+	v, s, err := p.GetAndSubscribe()
 	assert.NotNil(t, s)
+	assert.Equal(t, get, v)
 	assert.NoError(t, err)
 	assert.NoError(t, p.SetAndNotify(get))
 	assert.Equal(t, 1, p.ObserverLen())
@@ -28,16 +29,16 @@ func TestObservable(t *testing.T) {
 	p.Close()
 	assert.Equal(t, 0, p.ObserverLen())
 	assert.Equal(t, get, p.Get())
-	s, err = p.Subscribe()
+	_, s, err = p.GetAndSubscribe()
 	assert.Nil(t, s)
-	assert.Equal(t, ErrClosed, err)
-	assert.Equal(t, ErrClosed, p.SetAndNotify(get))
+	assert.Equal(t, errClosed, err)
+	assert.Equal(t, errClosed, p.SetAndNotify(get))
 	assert.NotPanics(t, p.Close)
 }
 
 func TestObserver(t *testing.T) {
 	p := NewObservable()
-	s, err := p.Subscribe()
+	_, s, err := p.GetAndSubscribe()
 	assert.NoError(t, err)
 
 	err = p.SetAndNotify(nil)
@@ -56,10 +57,11 @@ func TestObserver(t *testing.T) {
 
 	get := 100
 	p = NewObservable()
-	s, err = p.Subscribe()
+	_, s, err = p.GetAndSubscribe()
 	assert.NoError(t, err)
 
 	err = p.SetAndNotify(get)
+	assert.Equal(t, get, p.Get())
 	assert.NoError(t, err)
 	_, ok = <-s.C()
 	assert.True(t, ok)
@@ -81,7 +83,7 @@ func TestMultiObserver(t *testing.T) {
 	subMap := make(map[int]Observer, subLen)
 	valueMap := make(map[int]int, subLen)
 	for i := 0; i < subLen; i++ {
-		s, err := p.Subscribe()
+		_, s, err := p.GetAndSubscribe()
 		assert.NoError(t, err)
 		subMap[i] = s
 		valueMap[i] = -1
@@ -131,7 +133,7 @@ func TestAsyncObserver(t *testing.T) {
 	var wg sync.WaitGroup
 
 	for i := 0; i < subLen; i++ {
-		s, err := p.Subscribe()
+		_, s, err := p.GetAndSubscribe()
 		assert.NoError(t, err)
 
 		wg.Add(1)

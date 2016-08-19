@@ -7,16 +7,20 @@ import (
 	"github.com/m3db/m3x/log"
 )
 
+// SourceInput is a source that can be polled for data
 type SourceInput interface {
 	Poll() (interface{}, error)
 }
 
+// ObservableSource is a source that can be observed
+// it polls on the source input and notifies observers on updates
 type ObservableSource interface {
 	xclose.SimpleCloser
 
 	GetAndSubscribe() (interface{}, Observer, error)
 }
 
+// NewObservableSource returns an ObservableSource
 func NewObservableSource(input SourceInput, logger xlog.Logger) ObservableSource {
 	s := &source{
 		input:  input,
@@ -65,7 +69,5 @@ func (s *source) Close() {
 }
 
 func (s *source) GetAndSubscribe() (interface{}, Observer, error) {
-	o, err := s.o.Subscribe()
-	val := s.o.Get()
-	return val, o, err
+	return s.o.GetAndSubscribe()
 }

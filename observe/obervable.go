@@ -7,7 +7,9 @@ import (
 	"github.com/m3db/m3x/close"
 )
 
-var ErrClosed = errors.New("closed")
+var errClosed = errors.New("closed")
+
+type closer func()
 
 // Observer observes an Observable instance, can get notification when the Observable updates
 type Observer interface {
@@ -26,13 +28,14 @@ type Observable interface {
 	// Get returns the latest value
 	Get() interface{}
 	// Subscribe returns an Observer that will be notified on updates
-	Subscribe() (Observer, error)
+	GetAndSubscribe() (interface{}, Observer, error)
 	// SetAndNotify sets the new value of the Observable and notify observers
 	SetAndNotify(interface{}) error
 	// ObserverLen returns the number of observers
 	ObserverLen() int
 }
 
+// NewObservable returns an Observable
 func NewObservable() Observable {
 	return &observable{}
 }
@@ -52,20 +55,21 @@ func (o *observable) Get() interface{} {
 	return v
 }
 
-func (o *observable) Subscribe() (Observer, error) {
+func (o *observable) GetAndSubscribe() (interface{}, Observer, error) {
 	o.Lock()
-	defer o.Unlock()
 
 	if o.closed {
-		return nil, ErrClosed
+		o.Unlock()
+		return nil, nil, errClosed
 	}
 
 	c := make(chan struct{}, 1)
 	o.active = append(o.active, c)
 	closeFn := o.closeFunc(c)
+	o.Unlock()
 
 	observer := &observer{o: o, c: c, closeFn: closeFn}
-	return observer, nil
+	return o.Get(), observer, nil
 }
 
 func (o *observable) SetAndNotify(v interface{}) error {
@@ -73,7 +77,7 @@ func (o *observable) SetAndNotify(v interface{}) error {
 	defer o.Unlock()
 
 	if o.closed {
-		return ErrClosed
+		return errClosed
 	}
 
 	o.value = v
@@ -136,7 +140,7 @@ type observer struct {
 	o       Observable
 	c       <-chan struct{}
 	closed  bool
-	closeFn func()
+	closeFn closer
 }
 
 func (o *observer) C() <-chan struct{} {

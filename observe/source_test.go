@@ -21,14 +21,14 @@ func TestSource(t *testing.T) {
 
 func testSource(t *testing.T, inputErrAfter int, closeAfter int, observerNum int) {
 	input := testSourceInput(inputErrAfter)
-	s := NewObservableSource(input, xlog.SimpleLogger)
+	s := NewSource(input, xlog.SimpleLogger)
 
 	var wg sync.WaitGroup
 
 	// create a few observers
 	for i := 0; i < observerNum; i++ {
 		wg.Add(1)
-		_, o, err := s.GetAndSubscribe()
+		_, o, err := s.Observe()
 		assert.NoError(t, err)
 
 		i := i

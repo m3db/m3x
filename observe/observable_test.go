@@ -14,34 +14,34 @@ func TestObservable(t *testing.T) {
 	p := NewObservable()
 	assert.Nil(t, p.Get())
 	assert.Equal(t, 0, p.ObserverLen())
-	assert.NoError(t, p.SetAndNotify(nil))
+	assert.NoError(t, p.Update(nil))
 	get := 100
 	p = NewObservable()
-	p.SetAndNotify(get)
+	p.Update(get)
 	assert.Equal(t, get, p.Get())
-	v, s, err := p.GetAndSubscribe()
+	v, s, err := p.Observe()
 	assert.NotNil(t, s)
 	assert.Equal(t, get, v)
 	assert.NoError(t, err)
-	assert.NoError(t, p.SetAndNotify(get))
+	assert.NoError(t, p.Update(get))
 	assert.Equal(t, 1, p.ObserverLen())
 
 	p.Close()
 	assert.Equal(t, 0, p.ObserverLen())
 	assert.Equal(t, get, p.Get())
-	_, s, err = p.GetAndSubscribe()
+	_, s, err = p.Observe()
 	assert.Nil(t, s)
 	assert.Equal(t, errClosed, err)
-	assert.Equal(t, errClosed, p.SetAndNotify(get))
+	assert.Equal(t, errClosed, p.Update(get))
 	assert.NotPanics(t, p.Close)
 }
 
 func TestObserver(t *testing.T) {
 	p := NewObservable()
-	_, s, err := p.GetAndSubscribe()
+	_, s, err := p.Observe()
 	assert.NoError(t, err)
 
-	err = p.SetAndNotify(nil)
+	err = p.Update(nil)
 	assert.NoError(t, err)
 
 	_, ok := <-s.C()
@@ -57,10 +57,10 @@ func TestObserver(t *testing.T) {
 
 	get := 100
 	p = NewObservable()
-	_, s, err = p.GetAndSubscribe()
+	_, s, err = p.Observe()
 	assert.NoError(t, err)
 
-	err = p.SetAndNotify(get)
+	err = p.Update(get)
 	assert.Equal(t, get, p.Get())
 	assert.NoError(t, err)
 	_, ok = <-s.C()
@@ -83,7 +83,7 @@ func TestMultiObserver(t *testing.T) {
 	subMap := make(map[int]Observer, subLen)
 	valueMap := make(map[int]int, subLen)
 	for i := 0; i < subLen; i++ {
-		_, s, err := p.GetAndSubscribe()
+		_, s, err := p.Observe()
 		assert.NoError(t, err)
 		subMap[i] = s
 		valueMap[i] = -1
@@ -99,7 +99,7 @@ func TestMultiObserver(t *testing.T) {
 }
 
 func testObserveAndClose(t *testing.T, p Observable, subMap map[int]Observer, valueMap map[int]int, value interface{}) {
-	err := p.SetAndNotify(value)
+	err := p.Update(value)
 	assert.NoError(t, err)
 
 	for i, s := range subMap {
@@ -133,7 +133,7 @@ func TestAsyncObserver(t *testing.T) {
 	var wg sync.WaitGroup
 
 	for i := 0; i < subLen; i++ {
-		_, s, err := p.GetAndSubscribe()
+		_, s, err := p.Observe()
 		assert.NoError(t, err)
 
 		wg.Add(1)
@@ -152,7 +152,7 @@ func TestAsyncObserver(t *testing.T) {
 	}
 
 	for i := 0; i < subLen; i++ {
-		err := p.SetAndNotify(i)
+		err := p.Update(i)
 		assert.NoError(t, err)
 	}
 	p.Close()

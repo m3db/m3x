@@ -12,16 +12,17 @@ type SourceInput interface {
 	Poll() (interface{}, error)
 }
 
-// ObservableSource is a source that can be observed
+// Source is a source that can be observed
 // it polls on the source input and notifies observers on updates
-type ObservableSource interface {
+type Source interface {
 	xclose.SimpleCloser
 
-	GetAndSubscribe() (interface{}, Observer, error)
+	// Observe returns the value and an Observer that will be notified on updates
+	Observe() (interface{}, Observer, error)
 }
 
-// NewObservableSource returns an ObservableSource
-func NewObservableSource(input SourceInput, logger xlog.Logger) ObservableSource {
+// NewSource returns a Source
+func NewSource(input SourceInput, logger xlog.Logger) Source {
 	s := &source{
 		input:  input,
 		o:      NewObservable(),
@@ -48,7 +49,7 @@ func (s *source) run() {
 			s.logger.Errorf("error polling input source: %v", err)
 			continue
 		}
-		s.o.SetAndNotify(data)
+		s.o.Update(data)
 	}
 }
 
@@ -65,9 +66,9 @@ func (s *source) Close() {
 		return
 	}
 	s.closed = true
-	go s.o.Close()
+	s.o.Close()
 }
 
-func (s *source) GetAndSubscribe() (interface{}, Observer, error) {
-	return s.o.GetAndSubscribe()
+func (s *source) Observe() (interface{}, Observer, error) {
+	return s.o.Observe()
 }

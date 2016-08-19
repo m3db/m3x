@@ -27,10 +27,10 @@ type Observable interface {
 
 	// Get returns the latest value
 	Get() interface{}
-	// Subscribe returns an Observer that will be notified on updates
-	GetAndSubscribe() (interface{}, Observer, error)
-	// SetAndNotify sets the new value of the Observable and notify observers
-	SetAndNotify(interface{}) error
+	// Observe returns the value and an Observer that will be notified on updates
+	Observe() (interface{}, Observer, error)
+	// Update sets the value and notify observers
+	Update(interface{}) error
 	// ObserverLen returns the number of observers
 	ObserverLen() int
 }
@@ -55,7 +55,7 @@ func (o *observable) Get() interface{} {
 	return v
 }
 
-func (o *observable) GetAndSubscribe() (interface{}, Observer, error) {
+func (o *observable) Observe() (interface{}, Observer, error) {
 	o.Lock()
 
 	if o.closed {
@@ -72,7 +72,7 @@ func (o *observable) GetAndSubscribe() (interface{}, Observer, error) {
 	return o.Get(), observer, nil
 }
 
-func (o *observable) SetAndNotify(v interface{}) error {
+func (o *observable) Update(v interface{}) error {
 	o.Lock()
 	defer o.Unlock()
 
@@ -162,7 +162,6 @@ func (o *observer) Close() {
 	o.closed = true
 
 	if o.closeFn != nil {
-		onCloseFn := o.closeFn
-		go onCloseFn()
+		o.closeFn()
 	}
 }

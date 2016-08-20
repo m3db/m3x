@@ -115,7 +115,7 @@ func (o *observable) Close() {
 	o.active = nil
 }
 
-func (o *observable) closeFunc(c chan struct{}) func() {
+func (o *observable) closeFunc(c chan struct{}) closer {
 	return func() {
 		o.Lock()
 		defer o.Unlock()

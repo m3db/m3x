@@ -90,7 +90,6 @@ func TestMultiObserver(t *testing.T) {
 	}
 
 	for i := 0; i < subLen; i++ {
-		i := i
 		testObserveAndClose(t, p, subMap, valueMap, i)
 	}
 

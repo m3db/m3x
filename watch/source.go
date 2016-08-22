@@ -7,25 +7,22 @@ import (
 	"github.com/m3db/m3x/log"
 )
 
-// SourceInput is a source that can be polled for data
-type SourceInput interface {
-	Poll() (interface{}, error)
-}
+// SourcePollFn provides source data
+type SourcePollFn func() (interface{}, error)
 
-// Source is a source that can be watched
-// it polls on the source input and notifies watches on updates
+// Source polls data by calling SourcePollFn and notifies its watches on updates
 type Source interface {
 	xclose.SimpleCloser
 
-	// Watch returns the value and an Watch that will be notified on updates
+	// Watch returns the value and an Watch
 	Watch() (interface{}, Watch, error)
 }
 
 // NewSource returns a Source
-func NewSource(input SourceInput, logger xlog.Logger) Source {
+func NewSource(poll SourcePollFn, logger xlog.Logger) Source {
 	s := &source{
-		input:  input,
-		o:      NewWatchable(),
+		poll:   poll,
+		w:      NewWatchable(),
 		logger: logger,
 	}
 
@@ -36,20 +33,20 @@ func NewSource(input SourceInput, logger xlog.Logger) Source {
 type source struct {
 	sync.RWMutex
 
-	input  SourceInput
-	o      Watchable
+	poll   SourcePollFn
+	w      Watchable
 	logger xlog.Logger
 	closed bool
 }
 
 func (s *source) run() {
 	for !s.isClosed() {
-		data, err := s.input.Poll()
+		data, err := s.poll()
 		if err != nil {
 			s.logger.Errorf("error polling input source: %v", err)
 			continue
 		}
-		s.o.Update(data)
+		s.w.Update(data)
 	}
 }
 
@@ -66,9 +63,9 @@ func (s *source) Close() {
 		return
 	}
 	s.closed = true
-	s.o.Close()
+	s.w.Close()
 }
 
 func (s *source) Watch() (interface{}, Watch, error) {
-	return s.o.Watch()
+	return s.w.Watch()
 }

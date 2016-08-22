@@ -20,7 +20,7 @@ func TestSource(t *testing.T) {
 }
 
 func testSource(t *testing.T, inputErrAfter int, closeAfter int, watchNum int) {
-	input := testSourceInput(inputErrAfter)
+	input, callCount := testSourcePollFn(inputErrAfter)
 	s := NewSource(input, xlog.SimpleLogger)
 
 	var wg sync.WaitGroup
@@ -52,7 +52,7 @@ func testSource(t *testing.T, inputErrAfter int, closeAfter int, watchNum int) {
 	// schedule a thread to close Source
 	wg.Add(1)
 	go func() {
-		for input.(*fakeInput).called < closeAfter {
+		for *callCount < closeAfter {
 			time.Sleep(1 * time.Millisecond)
 		}
 		s.Close()
@@ -66,21 +66,15 @@ func testSource(t *testing.T, inputErrAfter int, closeAfter int, watchNum int) {
 	wg.Wait()
 }
 
-func testSourceInput(errAfter int) SourceInput {
-	return &fakeInput{errAfter: errAfter}
-}
-
-type fakeInput struct {
-	errAfter int
-	called   int
-}
-
-func (i *fakeInput) Poll() (interface{}, error) {
-	i.called++
-	time.Sleep(time.Millisecond)
-	if i.errAfter > 0 {
-		i.errAfter--
-		return time.Now().Unix(), nil
-	}
-	return nil, errors.New("mock error")
+func testSourcePollFn(errAfter int) (SourcePollFn, *int) {
+	callCount := 0
+	return func() (interface{}, error) {
+		callCount++
+		time.Sleep(time.Millisecond)
+		if errAfter > 0 {
+			errAfter--
+			return time.Now().Unix(), nil
+		}
+		return nil, errors.New("mock error")
+	}, &callCount
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/m3db/m3x/log"
 	"github.com/stretchr/testify/assert"
+	"sync/atomic"
 )
 
 func TestSource(t *testing.T) {
@@ -19,8 +20,9 @@ func TestSource(t *testing.T) {
 	testSource(t, 13, 15, 20)
 }
 
-func testSource(t *testing.T, inputErrAfter int, closeAfter int, watchNum int) {
-	input, callCount := testSourcePollFn(inputErrAfter)
+func testSource(t *testing.T, inputErrAfter int, closeAfter int32, watchNum int) {
+	var callCount int32
+	input := testPollFn(inputErrAfter, &callCount)
 	s := NewSource(input, xlog.SimpleLogger)
 
 	var wg sync.WaitGroup
@@ -52,7 +54,7 @@ func testSource(t *testing.T, inputErrAfter int, closeAfter int, watchNum int) {
 	// schedule a thread to close Source
 	wg.Add(1)
 	go func() {
-		for *callCount < closeAfter {
+		for atomic.LoadInt32(&callCount) < closeAfter {
 			time.Sleep(1 * time.Millisecond)
 		}
 		s.Close()
@@ -66,15 +68,14 @@ func testSource(t *testing.T, inputErrAfter int, closeAfter int, watchNum int) {
 	wg.Wait()
 }
 
-func testSourcePollFn(errAfter int) (SourcePollFn, *int) {
-	callCount := 0
+func testPollFn(errAfter int, callCount *int32) (SourcePollFn) {
 	return func() (interface{}, error) {
-		callCount++
+		atomic.AddInt32(callCount, 1)
 		time.Sleep(time.Millisecond)
 		if errAfter > 0 {
 			errAfter--
 			return time.Now().Unix(), nil
 		}
 		return nil, errors.New("mock error")
-	}, &callCount
+	}
 }

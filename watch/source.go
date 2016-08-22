@@ -1,4 +1,4 @@
-package observe
+package watch
 
 import (
 	"sync"
@@ -12,20 +12,20 @@ type SourceInput interface {
 	Poll() (interface{}, error)
 }
 
-// Source is a source that can be observed
-// it polls on the source input and notifies observers on updates
+// Source is a source that can be watched
+// it polls on the source input and notifies watches on updates
 type Source interface {
 	xclose.SimpleCloser
 
-	// Observe returns the value and an Observer that will be notified on updates
-	Observe() (interface{}, Observer, error)
+	// Watch returns the value and an Watch that will be notified on updates
+	Watch() (interface{}, Watch, error)
 }
 
 // NewSource returns a Source
 func NewSource(input SourceInput, logger xlog.Logger) Source {
 	s := &source{
 		input:  input,
-		o:      NewObservable(),
+		o:      NewWatchable(),
 		logger: logger,
 	}
 
@@ -37,7 +37,7 @@ type source struct {
 	sync.RWMutex
 
 	input  SourceInput
-	o      Observable
+	o      Watchable
 	logger xlog.Logger
 	closed bool
 }
@@ -69,6 +69,6 @@ func (s *source) Close() {
 	s.o.Close()
 }
 
-func (s *source) Observe() (interface{}, Observer, error) {
-	return s.o.Observe()
+func (s *source) Watch() (interface{}, Watch, error) {
+	return s.o.Watch()
 }

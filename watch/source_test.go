@@ -1,4 +1,4 @@
-package observe
+package watch
 
 import (
 	"errors"
@@ -19,16 +19,16 @@ func TestSource(t *testing.T) {
 	testSource(t, 13, 15, 20)
 }
 
-func testSource(t *testing.T, inputErrAfter int, closeAfter int, observerNum int) {
+func testSource(t *testing.T, inputErrAfter int, closeAfter int, watchNum int) {
 	input := testSourceInput(inputErrAfter)
 	s := NewSource(input, xlog.SimpleLogger)
 
 	var wg sync.WaitGroup
 
-	// create a few observers
-	for i := 0; i < observerNum; i++ {
+	// create a few watches
+	for i := 0; i < watchNum; i++ {
 		wg.Add(1)
-		_, o, err := s.Observe()
+		_, o, err := s.Watch()
 		assert.NoError(t, err)
 
 		i := i

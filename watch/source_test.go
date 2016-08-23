@@ -23,13 +23,20 @@ package watch
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/m3db/m3x/log"
 	"github.com/stretchr/testify/assert"
-	"sync/atomic"
 )
+
+func TestInitialized(t *testing.T) {
+	var callCount int32
+	s := NewSource(testPollFn(&callCount, 0, 10), xlog.SimpleLogger)
+	s.Close()
+	assert.False(t, s.Initialized())
+}
 
 func TestSource(t *testing.T) {
 	testSource(t, 30, 25, 20)
@@ -42,7 +49,7 @@ func TestSource(t *testing.T) {
 
 func testSource(t *testing.T, inputErrAfter int, closeAfter int32, watchNum int) {
 	var callCount int32
-	input := testPollFn(inputErrAfter, &callCount)
+	input := testPollFn(&callCount, inputErrAfter, closeAfter)
 	s := NewSource(input, xlog.SimpleLogger)
 
 	var wg sync.WaitGroup
@@ -50,20 +57,20 @@ func testSource(t *testing.T, inputErrAfter int, closeAfter int32, watchNum int)
 	// create a few watches
 	for i := 0; i < watchNum; i++ {
 		wg.Add(1)
-		_, o, err := s.Watch()
+		_, w, err := s.Watch()
 		assert.NoError(t, err)
 
 		i := i
 		go func() {
 			var v interface{}
 			count := 0
-			for _ = range o.C() {
+			for _ = range w.C() {
 				if v != nil {
-					assert.True(t, o.Get().(int64) >= v.(int64))
+					assert.True(t, w.Get().(int64) >= v.(int64))
 				}
-				v = o.Get()
+				v = w.Get()
 				if count > i {
-					o.Close()
+					w.Close()
 				}
 				count++
 			}
@@ -74,11 +81,10 @@ func testSource(t *testing.T, inputErrAfter int, closeAfter int32, watchNum int)
 	// schedule a thread to close Source
 	wg.Add(1)
 	go func() {
-		for atomic.LoadInt32(&callCount) < closeAfter {
-			time.Sleep(1 * time.Millisecond)
+		for !s.(*source).isClosed() {
+			time.Sleep(time.Millisecond)
 		}
-		s.Close()
-		assert.True(t, s.(*source).isClosed())
+		assert.True(t, s.Initialized())
 		// test Close again
 		s.Close()
 		assert.True(t, s.(*source).isClosed())
@@ -88,8 +94,11 @@ func testSource(t *testing.T, inputErrAfter int, closeAfter int32, watchNum int)
 	wg.Wait()
 }
 
-func testPollFn(errAfter int, callCount *int32) (SourcePollFn) {
+func testPollFn(callCount *int32, errAfter int, closeAfter int32) SourcePollFn {
 	return func() (interface{}, error) {
+		if atomic.LoadInt32(callCount) >= closeAfter {
+			return nil, ErrSourceClosed
+		}
 		atomic.AddInt32(callCount, 1)
 		time.Sleep(time.Millisecond)
 		if errAfter > 0 {

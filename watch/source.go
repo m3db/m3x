@@ -21,11 +21,14 @@
 package watch
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/m3db/m3x/close"
 	"github.com/m3db/m3x/log"
 )
+
+var ErrSourceClosed = errors.New("source closed")
 
 // SourcePollFn provides source data
 type SourcePollFn func() (interface{}, error)
@@ -34,6 +37,8 @@ type SourcePollFn func() (interface{}, error)
 type Source interface {
 	xclose.SimpleCloser
 
+	// Initialized returns whether the Source was initialized
+	Initialized() bool
 	// Watch returns the value and an Watch
 	Watch() (interface{}, Watch, error)
 }
@@ -53,20 +58,33 @@ func NewSource(poll SourcePollFn, logger xlog.Logger) Source {
 type source struct {
 	sync.RWMutex
 
-	poll   SourcePollFn
-	w      Watchable
-	logger xlog.Logger
-	closed bool
+	poll        SourcePollFn
+	w           Watchable
+	closed      bool
+	initialized bool
+	logger      xlog.Logger
 }
 
 func (s *source) run() {
 	for !s.isClosed() {
 		data, err := s.poll()
+		if err == ErrSourceClosed {
+			s.logger.Errorf("Upstream source is closed")
+			s.Close()
+			return
+		}
 		if err != nil {
-			s.logger.Errorf("error polling input source: %v", err)
+			s.logger.Errorf("Error polling input source: %v", err)
 			continue
 		}
-		s.w.Update(data)
+
+		err = s.w.Update(data)
+
+		if err == nil && !s.Initialized() {
+			s.Lock()
+			s.initialized = true
+			s.Unlock()
+		}
 	}
 }
 
@@ -74,6 +92,12 @@ func (s *source) isClosed() bool {
 	s.RLock()
 	defer s.RUnlock()
 	return s.closed
+}
+
+func (s *source) Initialized() bool {
+	s.RLock()
+	defer s.RUnlock()
+	return s.initialized
 }
 
 func (s *source) Close() {

@@ -28,11 +28,14 @@ import (
 	"github.com/m3db/m3x/log"
 )
 
-// ErrSourceClosed will be thrown from SourcePollFn to indicate that the Source should be closed
+// ErrSourceClosed could be thrown from SourceInput to indicate that the Source should be closed
 var ErrSourceClosed = errors.New("source closed")
 
-// SourcePollFn provides source data
-type SourcePollFn func() (interface{}, error)
+// SourceInput provides data for Source
+type SourceInput interface {
+	// Poll will be called by Source for data, any backoff/jitter logic should be handled here
+	Poll() (interface{}, error)
+}
 
 // Source polls data by calling SourcePollFn and notifies its watches on updates
 type Source interface {
@@ -45,9 +48,9 @@ type Source interface {
 }
 
 // NewSource returns a Source
-func NewSource(poll SourcePollFn, logger xlog.Logger) Source {
+func NewSource(input SourceInput, logger xlog.Logger) Source {
 	s := &source{
-		poll:   poll,
+		input:  input,
 		w:      NewWatchable(),
 		logger: logger,
 		ch:     make(chan struct{}),
@@ -60,17 +63,17 @@ func NewSource(poll SourcePollFn, logger xlog.Logger) Source {
 type source struct {
 	sync.RWMutex
 
-	poll   SourcePollFn
-	w      Watchable
-	closed bool
-	i      bool
-	ch     chan struct{}
-	logger xlog.Logger
+	input       SourceInput
+	w           Watchable
+	closed      bool
+	initialized bool
+	ch          chan struct{}
+	logger      xlog.Logger
 }
 
 func (s *source) run() {
 	for !s.isClosed() {
-		data, err := s.poll()
+		data, err := s.input.Poll()
 		if err == ErrSourceClosed {
 			s.logger.Errorf("Upstream source is closed")
 			s.Close()
@@ -83,10 +86,10 @@ func (s *source) run() {
 
 		err = s.w.Update(data)
 
-		if err == nil && !s.initialized() {
+		if err == nil && !s.isInitialized() {
 			s.Lock()
 			close(s.ch)
-			s.i = true
+			s.initialized = true
 			s.Unlock()
 		}
 	}
@@ -98,10 +101,10 @@ func (s *source) isClosed() bool {
 	return s.closed
 }
 
-func (s *source) initialized() bool {
+func (s *source) isInitialized() bool {
 	s.RLock()
 	defer s.RUnlock()
-	return s.i
+	return s.initialized
 }
 
 func (s *source) Initialized() <-chan struct{} {

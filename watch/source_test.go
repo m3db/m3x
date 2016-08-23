@@ -23,7 +23,6 @@ package xwatch
 import (
 	"errors"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -32,10 +31,9 @@ import (
 )
 
 func TestInitialized(t *testing.T) {
-	var callCount int32
-	s := NewSource(testPollFn(&callCount, 0, 10), xlog.SimpleLogger)
+	s := NewSource(&testSourceInput{callCount: 0, errAfter: 0, closeAfter: 10}, xlog.SimpleLogger)
 	s.Close()
-	assert.False(t, s.(*source).initialized())
+	assert.False(t, s.(*source).isInitialized())
 
 	ch := s.Initialized()
 	select {
@@ -54,10 +52,8 @@ func TestSource(t *testing.T) {
 	testSource(t, 13, 15, 20)
 }
 
-func testSource(t *testing.T, inputErrAfter int, closeAfter int32, watchNum int) {
-	var callCount int32
-	input := testPollFn(&callCount, inputErrAfter, closeAfter)
-	s := NewSource(input, xlog.SimpleLogger)
+func testSource(t *testing.T, errAfter int32, closeAfter int32, watchNum int) {
+	s := NewSource(&testSourceInput{callCount: 0, errAfter: errAfter, closeAfter: closeAfter}, xlog.SimpleLogger)
 
 	var wg sync.WaitGroup
 
@@ -107,17 +103,19 @@ func testSource(t *testing.T, inputErrAfter int, closeAfter int32, watchNum int)
 	wg.Wait()
 }
 
-func testPollFn(callCount *int32, errAfter int, closeAfter int32) SourcePollFn {
-	return func() (interface{}, error) {
-		if atomic.LoadInt32(callCount) >= closeAfter {
-			return nil, ErrSourceClosed
-		}
-		atomic.AddInt32(callCount, 1)
-		time.Sleep(time.Millisecond)
-		if errAfter > 0 {
-			errAfter--
-			return time.Now().Unix(), nil
-		}
-		return nil, errors.New("mock error")
+type testSourceInput struct {
+	callCount, errAfter, closeAfter int32
+}
+
+func (i *testSourceInput) Poll() (interface{}, error) {
+	if i.callCount >= i.closeAfter {
+		return nil, ErrSourceClosed
 	}
+	i.callCount++
+	time.Sleep(time.Millisecond)
+	if i.errAfter > 0 {
+		i.errAfter--
+		return time.Now().Unix(), nil
+	}
+	return nil, errors.New("mock error")
 }

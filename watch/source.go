@@ -37,8 +37,8 @@ type SourcePollFn func() (interface{}, error)
 type Source interface {
 	xclose.SimpleCloser
 
-	// Initialized returns whether the Source was initialized
-	Initialized() bool
+	// Initialized returns a channel that blocks until the Source was initialized
+	Initialized() <-chan struct{}
 	// Watch returns the value and an Watch
 	Watch() (interface{}, Watch, error)
 }
@@ -49,6 +49,7 @@ func NewSource(poll SourcePollFn, logger xlog.Logger) Source {
 		poll:   poll,
 		w:      NewWatchable(),
 		logger: logger,
+		ch:     make(chan struct{}),
 	}
 
 	go s.run()
@@ -58,11 +59,12 @@ func NewSource(poll SourcePollFn, logger xlog.Logger) Source {
 type source struct {
 	sync.RWMutex
 
-	poll        SourcePollFn
-	w           Watchable
-	closed      bool
-	initialized bool
-	logger      xlog.Logger
+	poll   SourcePollFn
+	w      Watchable
+	closed bool
+	i      bool
+	ch     chan struct{}
+	logger xlog.Logger
 }
 
 func (s *source) run() {
@@ -80,9 +82,10 @@ func (s *source) run() {
 
 		err = s.w.Update(data)
 
-		if err == nil && !s.Initialized() {
+		if err == nil && !s.initialized() {
 			s.Lock()
-			s.initialized = true
+			close(s.ch)
+			s.i = true
 			s.Unlock()
 		}
 	}
@@ -94,10 +97,16 @@ func (s *source) isClosed() bool {
 	return s.closed
 }
 
-func (s *source) Initialized() bool {
+func (s *source) initialized() bool {
 	s.RLock()
 	defer s.RUnlock()
-	return s.initialized
+	return s.i
+}
+
+func (s *source) Initialized() <-chan struct{} {
+	s.RLock()
+	defer s.RUnlock()
+	return s.ch
 }
 
 func (s *source) Close() {

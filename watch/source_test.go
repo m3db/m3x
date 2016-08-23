@@ -35,7 +35,14 @@ func TestInitialized(t *testing.T) {
 	var callCount int32
 	s := NewSource(testPollFn(&callCount, 0, 10), xlog.SimpleLogger)
 	s.Close()
-	assert.False(t, s.Initialized())
+	assert.False(t, s.(*source).initialized())
+
+	ch := s.Initialized()
+	select {
+	case _ = <-ch:
+		assert.Fail(t, "initialized channel should be blocked")
+	case <-time.After(time.Millisecond):
+	}
 }
 
 func TestSource(t *testing.T) {
@@ -84,7 +91,13 @@ func testSource(t *testing.T, inputErrAfter int, closeAfter int32, watchNum int)
 		for !s.(*source).isClosed() {
 			time.Sleep(time.Millisecond)
 		}
-		assert.True(t, s.Initialized())
+		ch := s.Initialized()
+		ok := true
+		select {
+		case _, ok = <-ch:
+		}
+		assert.False(t, ok, "initialized channel should be closed")
+
 		// test Close again
 		s.Close()
 		assert.True(t, s.(*source).isClosed())

@@ -32,8 +32,8 @@ import (
 
 func TestInitialized(t *testing.T) {
 	s := NewSource(&testSourceInput{callCount: 0, errAfter: 0, closeAfter: 10}, xlog.SimpleLogger)
+	assert.False(t, s.(*source).initialized)
 	s.Close()
-	assert.False(t, s.(*source).isInitialized())
 
 	ch := s.Initialized()
 	select {

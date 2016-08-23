@@ -86,11 +86,9 @@ func (s *source) run() {
 
 		err = s.w.Update(data)
 
-		if err == nil && !s.isInitialized() {
-			s.Lock()
+		if err == nil && !s.initialized {
 			close(s.ch)
 			s.initialized = true
-			s.Unlock()
 		}
 	}
 }
@@ -101,15 +99,7 @@ func (s *source) isClosed() bool {
 	return s.closed
 }
 
-func (s *source) isInitialized() bool {
-	s.RLock()
-	defer s.RUnlock()
-	return s.initialized
-}
-
 func (s *source) Initialized() <-chan struct{} {
-	s.RLock()
-	defer s.RUnlock()
 	return s.ch
 }
 

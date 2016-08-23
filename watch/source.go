@@ -28,6 +28,7 @@ import (
 	"github.com/m3db/m3x/log"
 )
 
+// ErrSourceClosed will be thrown from SourcePollFn to indicate that the Source should be closed
 var ErrSourceClosed = errors.New("source closed")
 
 // SourcePollFn provides source data

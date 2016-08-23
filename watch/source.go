@@ -41,8 +41,8 @@ type SourceInput interface {
 type Source interface {
 	xclose.SimpleCloser
 
-	// Initialized returns a channel that blocks until the Source was initialized
-	Initialized() <-chan struct{}
+	// WaitInit returns a channel that blocks until the Source was initialized
+	WaitInit() <-chan struct{}
 	// Watch returns the value and an Watch
 	Watch() (interface{}, Watch, error)
 }
@@ -53,7 +53,7 @@ func NewSource(input SourceInput, logger xlog.Logger) Source {
 		input:  input,
 		w:      NewWatchable(),
 		logger: logger,
-		ch:     make(chan struct{}),
+		initCh:     make(chan struct{}),
 	}
 
 	go s.run()
@@ -67,7 +67,7 @@ type source struct {
 	w           Watchable
 	closed      bool
 	initialized bool
-	ch          chan struct{}
+	initCh      chan struct{}
 	logger      xlog.Logger
 }
 
@@ -87,7 +87,7 @@ func (s *source) run() {
 		err = s.w.Update(data)
 
 		if err == nil && !s.initialized {
-			close(s.ch)
+			close(s.initCh)
 			s.initialized = true
 		}
 	}
@@ -99,8 +99,8 @@ func (s *source) isClosed() bool {
 	return s.closed
 }
 
-func (s *source) Initialized() <-chan struct{} {
-	return s.ch
+func (s *source) WaitInit() <-chan struct{} {
+	return s.initCh
 }
 
 func (s *source) Close() {

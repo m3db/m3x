@@ -32,14 +32,14 @@ import (
 
 func TestInitialized(t *testing.T) {
 	s := NewSource(&testSourceInput{callCount: 0, errAfter: 0, closeAfter: 10}, xlog.SimpleLogger)
-	assert.False(t, s.(*source).initialized)
 	s.Close()
+	assert.False(t, s.(*source).initialized)
 
-	ch := s.Initialized()
+	ch := s.WaitInit()
 	select {
 	case _ = <-ch:
 		assert.Fail(t, "initialized channel should be blocked")
-	case <-time.After(time.Millisecond):
+	case <-time.After(10 * time.Millisecond):
 	}
 }
 
@@ -87,7 +87,7 @@ func testSource(t *testing.T, errAfter int32, closeAfter int32, watchNum int) {
 		for !s.(*source).isClosed() {
 			time.Sleep(time.Millisecond)
 		}
-		ch := s.Initialized()
+		ch := s.WaitInit()
 		ok := true
 		select {
 		case _, ok = <-ch:

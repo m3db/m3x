@@ -25,9 +25,6 @@ import "github.com/m3db/m3x/instrument"
 // Allocator allocates an object for a pool.
 type Allocator func() interface{}
 
-// Work is a unit of item to be worked on.
-type Work func()
-
 // ObjectPool provides a pool for objects
 type ObjectPool interface {
 	// Init initializes the pool.
@@ -107,15 +104,3 @@ type BytesPool interface {
 	Put(buffer []byte)
 }
 
-// WorkerPool provides a pool for goroutines.
-type WorkerPool interface {
-	// Init initializes the pool
-	Init()
-
-	// Go waits until the next worker becomes available and executes it
-	Go(work Work)
-
-	// GoIfAvailable performs the work inside a worker if one is available and returns true,
-	// or false otherwise
-	GoIfAvailable(work Work) bool
-}

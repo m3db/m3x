@@ -234,6 +234,7 @@ func (e MultiError) FinalError() error {
 	return e
 }
 
+// NumErrors returns the total number of errors.
 func (e MultiError) NumErrors() int {
 	if e.err == nil {
 		return 0

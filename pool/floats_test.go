@@ -20,43 +20,42 @@
 
 package pool
 
-type bytesPool struct {
-	pool BucketizedObjectPool
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestFloatsPool(t *testing.T) {
+	p := getFloatsPool(2, []int{5, 10})
+	p.Init()
+
+	f1 := p.Get(1)
+	assert.Equal(t, 0, len(f1))
+	assert.Equal(t, 5, cap(f1))
+	f1 = append(f1, 1.0)
+
+	f2 := p.Get(3)
+	assert.Equal(t, 0, len(f2))
+	assert.Equal(t, 5, cap(f2))
+	f2 = append(f1, 2.0)
+	assert.NotEqual(t, f1, f2)
+	p.Put(f1)
+
+	f3 := p.Get(2)
+	assert.Equal(t, 0, len(f3))
+	assert.Equal(t, 5, cap(f3))
+	assert.Equal(t, f1, f3[:1])
 }
 
-// NewBytesPool creates a new bytes pool
-func NewBytesPool(sizes []Bucket, opts ObjectPoolOptions) BytesPool {
-	return &bytesPool{pool: NewBucketizedObjectPool(sizes, opts)}
-}
-
-func (p *bytesPool) Init() {
-	p.pool.Init(func(capacity int) interface{} {
-		return make([]byte, 0, capacity)
-	})
-}
-
-func (p *bytesPool) Get(capacity int) []byte {
-	if capacity < 1 {
-		return nil
+func getFloatsPool(bucketSizes int, bucketCaps []int) *floatsPool {
+	buckets := make([]Bucket, len(bucketCaps))
+	for i, cap := range bucketCaps {
+		buckets[i] = Bucket{
+			Count:    bucketSizes,
+			Capacity: cap,
+		}
 	}
 
-	return p.pool.Get(capacity).([]byte)
-}
-
-func (p *bytesPool) Put(value []byte) {
-	value = value[:0]
-	p.pool.Put(value, cap(value))
-}
-
-// AppendByte appends a byte to a byte slice getting a new slice from the
-// BytesPool if the slice is at capacity
-func AppendByte(bytes []byte, b byte, pool BytesPool) []byte {
-	if len(bytes) == cap(bytes) {
-		newBytes := pool.Get(cap(bytes) * 2)
-		n := copy(newBytes[:len(bytes)], bytes)
-		pool.Put(bytes)
-		bytes = newBytes[:n]
-	}
-
-	return append(bytes, b)
+	return NewFloatsPool(buckets, nil).(*floatsPool)
 }

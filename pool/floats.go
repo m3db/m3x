@@ -20,43 +20,26 @@
 
 package pool
 
-type bytesPool struct {
+type floatsPool struct {
 	pool BucketizedObjectPool
 }
 
-// NewBytesPool creates a new bytes pool
-func NewBytesPool(sizes []Bucket, opts ObjectPoolOptions) BytesPool {
-	return &bytesPool{pool: NewBucketizedObjectPool(sizes, opts)}
+// NewFloatsPool creates a new floats pool
+func NewFloatsPool(sizes []Bucket, opts ObjectPoolOptions) FloatsPool {
+	return &floatsPool{pool: NewBucketizedObjectPool(sizes, opts)}
 }
 
-func (p *bytesPool) Init() {
+func (p *floatsPool) Init() {
 	p.pool.Init(func(capacity int) interface{} {
-		return make([]byte, 0, capacity)
+		return make([]float64, 0, capacity)
 	})
 }
 
-func (p *bytesPool) Get(capacity int) []byte {
-	if capacity < 1 {
-		return nil
-	}
-
-	return p.pool.Get(capacity).([]byte)
+func (p *floatsPool) Get(capacity int) []float64 {
+	return p.pool.Get(capacity).([]float64)
 }
 
-func (p *bytesPool) Put(value []byte) {
+func (p *floatsPool) Put(value []float64) {
 	value = value[:0]
 	p.pool.Put(value, cap(value))
-}
-
-// AppendByte appends a byte to a byte slice getting a new slice from the
-// BytesPool if the slice is at capacity
-func AppendByte(bytes []byte, b byte, pool BytesPool) []byte {
-	if len(bytes) == cap(bytes) {
-		newBytes := pool.Get(cap(bytes) * 2)
-		n := copy(newBytes[:len(bytes)], bytes)
-		pool.Put(bytes)
-		bytes = newBytes[:n]
-	}
-
-	return append(bytes, b)
 }

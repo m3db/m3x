@@ -95,6 +95,10 @@ func (p *bytesPool) Init() {
 }
 
 func (p *bytesPool) Get(capacity int) []byte {
+	if capacity < 1 {
+		return nil
+	}
+
 	if capacity > p.maxBucketCapacity {
 		p.maxAlloc.Inc(1)
 		return p.alloc(capacity)

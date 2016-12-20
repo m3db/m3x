@@ -31,6 +31,8 @@ func TestBytesPool(t *testing.T) {
 	p.Init()
 	assert.Equal(t, 2, len(p.buckets))
 
+	assert.Equal(t, []byte(nil), p.Get(0))
+
 	b1 := p.Get(1)
 	assert.Equal(t, 0, len(b1))
 	assert.Equal(t, 5, cap(b1))

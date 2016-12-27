@@ -20,14 +20,20 @@
 
 package pool
 
-import "github.com/m3db/m3x/instrument"
+import (
+	"github.com/m3db/m3x/checked"
+	"github.com/m3db/m3x/instrument"
+)
 
-// Allocator allocates an object for a pool.
+// Allocator allocates an object for a pool
 type Allocator func() interface{}
+
+// CheckedAllocator allocates a checked object for a pool
+type CheckedAllocator func() checked.ReadWrite
 
 // ObjectPool provides a pool for objects
 type ObjectPool interface {
-	// Init initializes the pool.
+	// Init initializes the pool
 	Init(alloc Allocator)
 
 	// Get provides an object from the pool
@@ -35,6 +41,17 @@ type ObjectPool interface {
 
 	// Put returns an object to the pool
 	Put(obj interface{})
+}
+
+// CheckedObjectPool provides a checked pool for objects
+type CheckedObjectPool interface {
+	// Init initializes the pool
+	Init(alloc CheckedAllocator)
+
+	// Get provides an object from the pool to return it to the pool simply
+	// increment it immediately, continue to increment and decrement through
+	// use and when decremented to zero it will return itself to the pool
+	Get() checked.ReadWrite
 }
 
 // ObjectPoolOptions provides options for an object pool
@@ -117,6 +134,17 @@ type BytesPool interface {
 
 	// Put returns a buffer to the pool
 	Put(buffer []byte)
+}
+
+// CheckedBytesPool provides a checked pool for variable size buffers
+type CheckedBytesPool interface {
+	// Init initializes the pool
+	Init()
+
+	// Get provides a buffer from the pool, to return it to the pool simply
+	// increment it immediately, continue to increment and decrement through
+	// use and when decremented to zero it will return itself to the pool
+	Get(capacity int) checked.Bytes
 }
 
 // FloatsPool provides a pool for variable-sized float64 slices

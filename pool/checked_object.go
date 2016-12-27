@@ -34,7 +34,12 @@ type checkedObjectFinalizer struct {
 
 func (f *checkedObjectFinalizer) Finalize() {
 	f.p.pool.Put(f.value)
-	f.p.finalizerPool.Put(f)
+
+	finalizerPool := f.p.finalizerPool
+	f.value = nil
+	f.p = nil
+
+	finalizerPool.Put(f)
 }
 
 // NewCheckedObjectPool creates a new checked pool

@@ -64,11 +64,8 @@ func TestTracebackReadAfterFree(t *testing.T) {
 	assert.True(t, strings.Contains(str, "read after free: reads=1, ref=0"))
 	assert.True(t, strings.Contains(str, "IncReads, ref=0, unixnanos="))
 	assert.True(t, strings.Contains(str, "checked.(*RefCount).IncReads"))
-	assert.True(t, strings.Contains(str, "checked/ref.go"))
 	assert.True(t, strings.Contains(str, "DecRef, ref=0, unixnanos="))
 	assert.True(t, strings.Contains(str, "checked.(*RefCount).DecRef"))
-	assert.True(t, strings.Contains(str, "checked/ref.go"))
 	assert.True(t, strings.Contains(str, "IncRef, ref=1, unixnanos="))
 	assert.True(t, strings.Contains(str, "checked.(*RefCount).IncRef"))
-	assert.True(t, strings.Contains(str, "checked/ref.go"))
 }

@@ -58,8 +58,11 @@ func (p *checkedBytesPool) Get(capacity int) checked.Bytes {
 }
 
 func (p *checkedBytesPool) FinalizeBytes(bytes checked.Bytes) {
+	bytes.IncRef()
 	bytes.Resize(0)
-	p.pool.Put(bytes, bytes.Cap())
+	capacity := bytes.Cap()
+	bytes.DecRef()
+	p.pool.Put(bytes, capacity)
 }
 
 // AppendByteChecked appends a byte to a byte slice getting a new slice from
@@ -68,19 +71,33 @@ func AppendByteChecked(
 	bytes checked.Bytes,
 	b byte,
 	pool CheckedBytesPool,
-) checked.Bytes {
+) (
+	result checked.Bytes,
+	swapped bool,
+) {
+	orig := bytes
+
 	if bytes.Len() == bytes.Cap() {
 		newBytes := pool.Get(bytes.Cap() * 2)
+
+		// Inc the ref to read/write to it
+		newBytes.IncRef()
 		newBytes.Resize(bytes.Len())
 
 		copy(newBytes.Get(), bytes.Get())
-
-		bytes.DecRef()
 
 		bytes = newBytes
 	}
 
 	bytes.Append(b)
 
-	return bytes
+	result = bytes
+	swapped = orig != bytes
+
+	if swapped {
+		// No longer holding reference from the inc
+		result.DecRef()
+	}
+
+	return
 }

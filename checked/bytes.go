@@ -57,27 +57,42 @@ func NewBytes(value []byte, opts BytesOptions) Bytes {
 }
 
 func (b *bytesRef) Get() []byte {
-	return b.value
+	b.IncReads()
+	v := b.value
+	b.DecReads()
+	return v
 }
 
 func (b *bytesRef) Cap() int {
-	return cap(b.value)
+	b.IncReads()
+	v := cap(b.value)
+	b.DecReads()
+	return v
 }
 
 func (b *bytesRef) Len() int {
-	return len(b.value)
+	b.IncReads()
+	v := len(b.value)
+	b.DecReads()
+	return v
 }
 
 func (b *bytesRef) Resize(size int) {
+	b.IncWrites()
 	b.value = b.value[:size]
+	b.DecWrites()
 }
 
 func (b *bytesRef) Append(value byte) {
+	b.IncWrites()
 	b.value = append(b.value, value)
+	b.DecWrites()
 }
 
 func (b *bytesRef) AppendAll(values []byte) {
+	b.IncWrites()
 	b.value = append(b.value, values...)
+	b.DecWrites()
 }
 
 func (b *bytesRef) Finalize() {

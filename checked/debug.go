@@ -41,6 +41,11 @@ func SetPanicFn(fn PanicFn) {
 	panicFn = fn
 }
 
+// Panic will execute the currently set panic function
+func Panic(e error) {
+	panicFn(e)
+}
+
 // ResetPanicFn resets the panic function to the default runtime panic
 func ResetPanicFn() {
 	panicFn = defaultPanic

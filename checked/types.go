@@ -33,19 +33,22 @@ func (fn FinalizerFn) Finalize() {
 	fn()
 }
 
-// Ref is an entity that checks reference counts.
+// Ref is an entity that checks ref counts.
 type Ref interface {
-	// IncRef increments the reference count to this entity.
+	// IncRef increments the ref count to this entity.
 	IncRef()
 
-	// DecRef decrements the reference count to this entity.
+	// DecRef decrements the ref count to this entity.
 	DecRef()
 
-	// XfrRef transfers the reference to this entity from object to another.
+	// XfrRef transfers the ref to this entity from object to another.
 	XfrRef()
 
-	// NumRef returns the reference count to this entity.
+	// NumRef returns the ref count to this entity.
 	NumRef() int
+
+	// Finalize will call the finalizer if any, ref count must be zero.
+	Finalize()
 
 	// Finalizer returns the finalizer if any or nil otherwise.
 	Finalizer() Finalizer

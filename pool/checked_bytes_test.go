@@ -54,13 +54,16 @@ func TestCheckedBytesPool(t *testing.T) {
 	b2.Append('b')
 
 	assert.NotEqual(t, b1.Get(), b2.Get())
+
 	copiedB1 := append([]byte(nil), b1.Get()...)
 	b1.DecRef()
+	b1.Finalize()
 
 	assert.Equal(t, 1, checkedBytesPoolBucketLen(p, 0))
 	assert.Equal(t, 2, checkedBytesPoolBucketLen(p, 1))
 
 	b3 := p.Get(2)
+	b3.IncRef()
 	assert.Equal(t, 0, b3.Len())
 	assert.Equal(t, 5, b3.Cap())
 	assert.Equal(t, copiedB1, b3.Get()[:1])
@@ -77,7 +80,12 @@ func TestAppendByteChecked(t *testing.T) {
 	firstB1 := b1
 
 	for _, val := range vals {
-		b1 = AppendByteChecked(b1, val, p)
+		if b, swapped := AppendByteChecked(b1, val, p); swapped {
+			b1.DecRef()
+			b1.Finalize()
+			b1 = b
+			b1.IncRef()
+		}
 	}
 
 	// Ensure swapped out with new pooled bytes
@@ -89,6 +97,7 @@ func TestAppendByteChecked(t *testing.T) {
 
 	// Ensure reusing the first slice we retrieved
 	b2 := p.Get(2)
+	b2.IncRef()
 	assert.Equal(t, 3, b2.Cap())
 	assert.Equal(t, b1.Get()[:3], b2.Get()[:3])
 }

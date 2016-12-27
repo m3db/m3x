@@ -48,6 +48,9 @@ func TestTracebackReadAfterFree(t *testing.T) {
 	assert.Equal(t, 0, finalized)
 
 	elem.DecRef()
+	assert.Equal(t, 0, finalized)
+
+	elem.Finalize()
 	assert.Equal(t, 1, finalized)
 
 	var err error

@@ -49,10 +49,8 @@ func (c *RefCount) DecRef() {
 		tracebackEvent(c, int(n), decRefEvent)
 	}
 
-	if n == 0 && c.finalizer != nil {
-		c.finalizer.Finalize()
-	} else if n < 0 {
-		err := fmt.Errorf("double free, ref=%d", n)
+	if n < 0 {
+		err := fmt.Errorf("negative ref count, ref=%d", n)
 		panicRef(c, err)
 	}
 }
@@ -67,6 +65,17 @@ func (c *RefCount) XfrRef() {
 // NumRef returns the reference count to this entity.
 func (c *RefCount) NumRef() int {
 	return int(atomic.LoadInt32(&c.ref))
+}
+
+// Finalize will call the finalizer if any, ref count must be zero.
+func (c *RefCount) Finalize() {
+	if n := c.NumRef(); n != 0 {
+		err := fmt.Errorf("finalize before zero ref count, ref=%d", n)
+		panicRef(c, err)
+	}
+	if c.finalizer != nil {
+		c.finalizer.Finalize()
+	}
 }
 
 // Finalizer returns the finalizer if any or nil otherwise.

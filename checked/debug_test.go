@@ -61,25 +61,14 @@ func TestTracebackReadAfterFree(t *testing.T) {
 	require.Error(t, err)
 
 	str := err.Error()
-	assertLineContains(t, str, 0, "read after free: reads=1, ref=0")
-	assertLineContains(t, str, 2, "IncReads, ref=0, unixnanos=")
-	assertLineContains(t, str, 3, "checked.(*RefCount).IncReads")
-	assertLineContains(t, str, 4, "checked/ref.go")
-	assertLineContains(t, str, 12, "DecRef, ref=0, unixnanos=")
-	assertLineContains(t, str, 13, "checked.(*RefCount).DecRef")
-	assertLineContains(t, str, 14, "checked/ref.go")
-	assertLineContains(t, str, 22, "IncRef, ref=1, unixnanos=")
-	assertLineContains(t, str, 23, "checked.(*RefCount).IncRef")
-	assertLineContains(t, str, 24, "checked/ref.go")
-}
-
-func assertLineContains(
-	t *testing.T,
-	str string,
-	line int,
-	substr string,
-) {
-	lines := strings.Split(str, "\n")
-	require.False(t, line < 0 || line >= len(lines))
-	assert.True(t, strings.Contains(lines[line], substr))
+	assert.True(t, strings.Contains(str, "read after free: reads=1, ref=0"))
+	assert.True(t, strings.Contains(str, "IncReads, ref=0, unixnanos="))
+	assert.True(t, strings.Contains(str, "checked.(*RefCount).IncReads"))
+	assert.True(t, strings.Contains(str, "checked/ref.go"))
+	assert.True(t, strings.Contains(str, "DecRef, ref=0, unixnanos="))
+	assert.True(t, strings.Contains(str, "checked.(*RefCount).DecRef"))
+	assert.True(t, strings.Contains(str, "checked/ref.go"))
+	assert.True(t, strings.Contains(str, "IncRef, ref=1, unixnanos="))
+	assert.True(t, strings.Contains(str, "checked.(*RefCount).IncRef"))
+	assert.True(t, strings.Contains(str, "checked/ref.go"))
 }

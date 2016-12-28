@@ -28,7 +28,7 @@ type checkedObjectPool struct {
 }
 
 type checkedObjectFinalizer struct {
-	value checked.ReadWrite
+	value checked.ReadWriteRef
 	p     *checkedObjectPool
 }
 
@@ -44,6 +44,9 @@ func (f *checkedObjectFinalizer) Finalize() {
 
 // NewCheckedObjectPool creates a new checked pool
 func NewCheckedObjectPool(opts ObjectPoolOptions) CheckedObjectPool {
+	if opts == nil {
+		opts = NewObjectPoolOptions()
+	}
 	return &checkedObjectPool{
 		pool: NewObjectPool(opts),
 		finalizerPool: NewObjectPool(opts.SetInstrumentOptions(opts.InstrumentOptions().
@@ -62,8 +65,8 @@ func (p *checkedObjectPool) Init(alloc CheckedAllocator) {
 	})
 }
 
-func (p *checkedObjectPool) Get() checked.ReadWrite {
-	value := p.pool.Get().(checked.ReadWrite)
+func (p *checkedObjectPool) Get() checked.ReadWriteRef {
+	value := p.pool.Get().(checked.ReadWriteRef)
 	finalizer := p.finalizerPool.Get().(*checkedObjectFinalizer)
 	finalizer.value = value
 	finalizer.p = p

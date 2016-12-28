@@ -114,8 +114,8 @@ func (c *RefCount) DecReads() {
 	}
 }
 
-// NumReads returns the active reads count to this entity.
-func (c *RefCount) NumReads() int {
+// NumReaders returns the active reads count to this entity.
+func (c *RefCount) NumReaders() int {
 	return int(atomic.LoadInt32(&c.reads))
 }
 
@@ -151,7 +151,7 @@ func (c *RefCount) DecWrites() {
 	}
 }
 
-// NumWrites returns the active writes count to this entity.
-func (c *RefCount) NumWrites() int {
+// NumWriters returns the active writes count to this entity.
+func (c *RefCount) NumWriters() int {
 	return int(atomic.LoadInt32(&c.writes))
 }

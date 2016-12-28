@@ -59,30 +59,33 @@ type Ref interface {
 
 // Read is an entity that checks reads.
 type Read interface {
-	Ref
-
 	// IncReads increments the reads count to this entity.
 	IncReads()
 
 	// DecReads decrements the reads count to this entity.
 	DecReads()
 
-	// NumReads returns the active reads count to this entity.
-	NumReads() int
+	// NumReaders returns the active reads count to this entity.
+	NumReaders() int
 }
 
-// ReadWrite is an entity that checks reads and writes.
-type ReadWrite interface {
-	Read
-
+// Write is an entity that checks writes.
+type Write interface {
 	// IncWrites increments the writes count to this entity.
 	IncWrites()
 
 	// DecWrites decrements the writes count to this entity.
 	DecWrites()
 
-	// NumWrites returns the active writes count to this entity.
-	NumWrites() int
+	// NumWriters returns the active writes count to this entity.
+	NumWriters() int
+}
+
+// ReadWriteRef is an entity that checks ref counts, reads and writes.
+type ReadWriteRef interface {
+	Ref
+	Read
+	Write
 }
 
 // BytesFinalizer finalizes a checked byte slice.

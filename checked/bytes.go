@@ -26,7 +26,7 @@ var (
 
 // Bytes is a checked byte slice.
 type Bytes interface {
-	ReadWrite
+	ReadWriteRef
 
 	Get() []byte
 	Cap() int

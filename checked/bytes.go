@@ -34,6 +34,7 @@ type Bytes interface {
 	Resize(size int)
 	Append(value byte)
 	AppendAll(values []byte)
+	Reset(v []byte)
 }
 
 type bytesRef struct {
@@ -92,6 +93,12 @@ func (b *bytesRef) Append(value byte) {
 func (b *bytesRef) AppendAll(values []byte) {
 	b.IncWrites()
 	b.value = append(b.value, values...)
+	b.DecWrites()
+}
+
+func (b *bytesRef) Reset(v []byte) {
+	b.IncWrites()
+	b.value = v
 	b.DecWrites()
 }
 

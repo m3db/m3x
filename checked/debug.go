@@ -27,9 +27,14 @@ import (
 	"time"
 )
 
+const (
+	defaultTraceback       = false
+	defaultTracebackCycles = 3
+)
+
 var (
-	traceback       = false
-	tracebackCycles = 3
+	traceback       = defaultTraceback
+	tracebackCycles = defaultTracebackCycles
 	panicFn         = defaultPanic
 )
 
@@ -78,7 +83,7 @@ type debuggerEvent int
 const (
 	incRefEvent debuggerEvent = iota
 	decRefEvent
-	xfrRefEvent
+	moveRefEvent
 	incReadsEvent
 	decReadsEvent
 	incWritesEvent
@@ -91,8 +96,8 @@ func (d debuggerEvent) String() string {
 		return "IncRef"
 	case decRefEvent:
 		return "DecRef"
-	case xfrRefEvent:
-		return "XfrRef"
+	case moveRefEvent:
+		return "MoveRef"
 	case incReadsEvent:
 		return "IncReads"
 	case decReadsEvent:

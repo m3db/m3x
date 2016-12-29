@@ -58,7 +58,7 @@ func (c *RefCount) DecRef() {
 // MoveRef signals a move of the ref to this entity.
 func (c *RefCount) MoveRef() {
 	if traceback {
-		tracebackEvent(c, c.NumRef(), xfrRefEvent)
+		tracebackEvent(c, c.NumRef(), moveRefEvent)
 	}
 }
 

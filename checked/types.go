@@ -93,6 +93,14 @@ type BytesFinalizer interface {
 	FinalizeBytes(b Bytes)
 }
 
+// BytesFinalizerFn is a function literal that is a bytes finalizer.
+type BytesFinalizerFn func(b Bytes)
+
+// FinalizeBytes will call the function literal as a bytes finalizer.
+func (fn BytesFinalizerFn) FinalizeBytes(b Bytes) {
+	fn(b)
+}
+
 // BytesOptions is a bytes option
 type BytesOptions interface {
 	// Finalizer is a bytes finalizer to call when finalized.

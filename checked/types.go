@@ -41,8 +41,8 @@ type Ref interface {
 	// DecRef decrements the ref count to this entity.
 	DecRef()
 
-	// XfrRef transfers the ref to this entity from object to another.
-	XfrRef()
+	// MoveRef signals a move of the ref to this entity.
+	MoveRef()
 
 	// NumRef returns the ref count to this entity.
 	NumRef() int

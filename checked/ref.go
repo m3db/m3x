@@ -55,8 +55,8 @@ func (c *RefCount) DecRef() {
 	}
 }
 
-// XfrRef transfers the reference to this entity from object to another.
-func (c *RefCount) XfrRef() {
+// MoveRef signals a move of the ref to this entity.
+func (c *RefCount) MoveRef() {
 	if traceback {
 		tracebackEvent(c, c.NumRef(), xfrRefEvent)
 	}

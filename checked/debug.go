@@ -125,10 +125,12 @@ func (d debuggerEvent) String() string {
 }
 
 type debugger struct {
+	sync.Mutex
 	entries [][]*debuggerEntry
 }
 
 func (d *debugger) append(event debuggerEvent, ref int, pc []uintptr) {
+	d.Lock()
 	if len(d.entries) == 0 {
 		d.entries = make([][]*debuggerEntry, 1, tracebackCycles)
 	}
@@ -158,16 +160,19 @@ func (d *debugger) append(event debuggerEvent, ref int, pc []uintptr) {
 			d.entries = d.entries[:len(d.entries)+1]
 		}
 	}
+	d.Unlock()
 }
 
 func (d *debugger) String() string {
 	buffer := bytes.NewBuffer(nil)
+	d.Lock()
 	// Reverse the entries for time descending
 	for i := len(d.entries) - 1; i >= 0; i-- {
 		for j := len(d.entries[i]) - 1; j >= 0; j-- {
 			buffer.WriteString(d.entries[i][j].String())
 		}
 	}
+	d.Unlock()
 	return buffer.String()
 }
 
@@ -212,16 +217,24 @@ func (e *debuggerEntry) String() string {
 }
 
 func getDebuggerRef(c *RefCount) *debuggerRef {
-	if c.finalizer == nil {
-		c.finalizer = &debuggerRef{}
-		return c.finalizer.(*debuggerRef)
+	// Note: because finalizer is an atomic pointer not using
+	// CompareAndSwapPointer makes this code is racy, however
+	// it is safe due to using atomic load and stores.
+	// This is used primarily for debugging and the races will
+	// show up when inspecting the tracebacks.
+	finalizer := c.Finalizer()
+	if finalizer == nil {
+		debugger := &debuggerRef{}
+		c.SetFinalizer(debugger)
+		return debugger
 	}
 
-	debugger, ok := c.finalizer.(*debuggerRef)
+	debugger, ok := finalizer.(*debuggerRef)
 	if !ok {
 		// Wrap the existing finalizer in a debuggerRef
-		c.finalizer = &debuggerRef{finalizer: c.finalizer}
-		return c.finalizer.(*debuggerRef)
+		debugger := &debuggerRef{finalizer: finalizer}
+		c.SetFinalizer(debugger)
+		return debugger
 	}
 
 	return debugger

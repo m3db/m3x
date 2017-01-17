@@ -22,6 +22,9 @@ package checked
 
 import (
 	"fmt"
+	"reflect"
+	"runtime"
+	"sync"
 	"sync/atomic"
 	"unsafe"
 )
@@ -168,4 +171,74 @@ func (c *RefCount) DecWrites() {
 // NumWriters returns the active writes count to this entity.
 func (c *RefCount) NumWriters() int {
 	return int(atomic.LoadInt32(&c.writes))
+}
+
+// TrackObject sets up the initial internal state of the Ref for
+// leak detection.
+func (c *RefCount) TrackObject(v interface{}) {
+	if atomic.LoadUint64(&_LeakDetectionFlag) == 0 {
+		return
+	}
+
+	var size int
+
+	switch v := reflect.ValueOf(v); v.Kind() {
+	case reflect.Ptr:
+		size = int(v.Type().Elem().Size())
+	case reflect.Array, reflect.Slice, reflect.Chan:
+		size = int(v.Type().Elem().Size()) * v.Cap()
+	case reflect.String:
+		size = v.Len()
+	default:
+		size = int(v.Type().Size())
+	}
+
+	runtime.SetFinalizer(c, func(c *RefCount) {
+		if c.NumRef() == 0 {
+			return
+		}
+
+		origin := getDebuggerRef(c).String()
+
+		_Leaks.Lock()
+		// Keep track of bytes leaked, not objects.
+		_Leaks.M[origin] += uint64(size)
+		_Leaks.Unlock()
+	})
+}
+
+// EnableLeakDetection turns leak detection on.
+func EnableLeakDetection() {
+	atomic.StoreUint64(&_LeakDetectionFlag, 1)
+}
+
+// DisableLeakDetection turns leak detection off.
+func DisableLeakDetection() {
+	atomic.StoreUint64(&_LeakDetectionFlag, 0)
+}
+
+// DumpLeaks returns all detected leaks so far.
+func DumpLeaks() []string {
+	var r []string
+
+	_Leaks.RLock()
+
+	for k, v := range _Leaks.M {
+		r = append(r, fmt.Sprintf("leaked %d bytes, origin:\n%s", v, k))
+	}
+
+	_Leaks.RUnlock()
+
+	return r
+}
+
+var _LeakDetectionFlag uint64
+
+var _Leaks struct {
+	sync.RWMutex
+	M map[string]uint64
+}
+
+func init() {
+	_Leaks.M = make(map[string]uint64)
 }

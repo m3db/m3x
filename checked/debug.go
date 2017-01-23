@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -33,6 +32,7 @@ const (
 	defaultTraceback         = false
 	defaultTracebackCycles   = 3
 	defaultTracebackMaxDepth = 64
+	defaultLeakDetection     = false
 )
 
 var (
@@ -40,7 +40,7 @@ var (
 	tracebackCycles   = defaultTracebackCycles
 	tracebackMaxDepth = defaultTracebackMaxDepth
 	panicFn           = defaultPanic
-	leakDetectionFlag uint64
+	leakDetectionFlag = defaultLeakDetection
 )
 
 var tracebackCallersPool = sync.Pool{New: func() interface{} {
@@ -74,10 +74,6 @@ func ResetPanicFn() {
 	panicFn = defaultPanic
 }
 
-func defaultPanic(e error) {
-	panic(e)
-}
-
 // EnableTracebacks turns traceback collection for events on
 func EnableTracebacks() {
 	traceback = true
@@ -98,11 +94,41 @@ func SetTracebackMaxDepth(frames int) {
 	tracebackMaxDepth = frames
 }
 
+// EnableLeakDetection turns leak detection on.
+func EnableLeakDetection() {
+	leakDetectionFlag = true
+}
+
+// DisableLeakDetection turns leak detection off.
+func DisableLeakDetection() {
+	leakDetectionFlag = false
+}
+
+// DumpLeaks returns all detected leaks so far.
+func DumpLeaks() []string {
+	var r []string
+
+	leaks.RLock()
+
+	for k, v := range leaks.M {
+		r = append(r, fmt.Sprintf("leaked %d bytes, origin:\n%s", v, k))
+	}
+
+	leaks.RUnlock()
+
+	return r
+}
+
+func defaultPanic(e error) {
+	panic(e)
+}
+
 func panicRef(c *RefCount, err error) {
 	if traceback {
 		trace := getDebuggerRef(c).String()
 		err = fmt.Errorf("%v, traceback:\n\n%s", err, trace)
 	}
+
 	panicFn(err)
 }
 
@@ -258,6 +284,10 @@ func getDebuggerRef(c *RefCount) *debuggerRef {
 }
 
 func tracebackEvent(c *RefCount, ref int, e debuggerEvent) {
+	if !traceback {
+		return
+	}
+
 	d := getDebuggerRef(c)
 	depth := tracebackMaxDepth
 	pc := tracebackCallersPool.Get().([]uintptr)
@@ -270,31 +300,6 @@ func tracebackEvent(c *RefCount, ref int, e debuggerEvent) {
 	skipEntry := 2
 	n := runtime.Callers(skipEntry, pc)
 	d.append(e, ref, pc[:n])
-}
-
-// EnableLeakDetection turns leak detection on.
-func EnableLeakDetection() {
-	atomic.StoreUint64(&leakDetectionFlag, 1)
-}
-
-// DisableLeakDetection turns leak detection off.
-func DisableLeakDetection() {
-	atomic.StoreUint64(&leakDetectionFlag, 0)
-}
-
-// DumpLeaks returns all detected leaks so far.
-func DumpLeaks() []string {
-	var r []string
-
-	leaks.RLock()
-
-	for k, v := range leaks.M {
-		r = append(r, fmt.Sprintf("leaked %d bytes, origin:\n%s", v, k))
-	}
-
-	leaks.RUnlock()
-
-	return r
 }
 
 func init() {

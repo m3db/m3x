@@ -39,18 +39,13 @@ type RefCount struct {
 // IncRef increments the reference count to this entity.
 func (c *RefCount) IncRef() {
 	n := atomic.AddInt32(&c.ref, 1)
-	if traceback {
-		tracebackEvent(c, int(n), incRefEvent)
-	}
+	tracebackEvent(c, int(n), incRefEvent)
 }
 
 // DecRef decrements the reference count to this entity.
 func (c *RefCount) DecRef() {
 	n := atomic.AddInt32(&c.ref, -1)
-
-	if traceback {
-		tracebackEvent(c, int(n), decRefEvent)
-	}
+	tracebackEvent(c, int(n), decRefEvent)
 
 	if n < 0 {
 		err := fmt.Errorf("negative ref count, ref=%d", n)
@@ -60,9 +55,7 @@ func (c *RefCount) DecRef() {
 
 // MoveRef signals a move of the ref to this entity.
 func (c *RefCount) MoveRef() {
-	if traceback {
-		tracebackEvent(c, c.NumRef(), moveRefEvent)
-	}
+	tracebackEvent(c, c.NumRef(), moveRefEvent)
 }
 
 // NumRef returns the reference count to this entity.
@@ -73,20 +66,15 @@ func (c *RefCount) NumRef() int {
 // Finalize will call the finalizer if any, ref count must be zero.
 func (c *RefCount) Finalize() {
 	n := c.NumRef()
-
-	if traceback {
-		tracebackEvent(c, int(n), finalizeEvent)
-	}
+	tracebackEvent(c, int(n), finalizeEvent)
 
 	if n != 0 {
 		err := fmt.Errorf("finalize before zero ref count, ref=%d", n)
 		panicRef(c, err)
 	}
 
-	finalizerPtr := (*Finalizer)(atomic.LoadPointer(&c.finalizer))
-	if finalizerPtr != nil {
-		finalizer := *finalizerPtr
-		finalizer.Finalize()
+	if f := c.Finalizer(); f != nil {
+		f.Finalize()
 	}
 }
 
@@ -106,11 +94,9 @@ func (c *RefCount) SetFinalizer(f Finalizer) {
 
 // IncReads increments the reads count to this entity.
 func (c *RefCount) IncReads() {
-	if traceback {
-		tracebackEvent(c, c.NumRef(), incReadsEvent)
-	}
-
+	tracebackEvent(c, c.NumRef(), incReadsEvent)
 	n := atomic.AddInt32(&c.reads, 1)
+
 	if ref := c.NumRef(); n > 0 && ref < 1 {
 		err := fmt.Errorf("read after free: reads=%d, ref=%d", n, ref)
 		panicRef(c, err)
@@ -119,11 +105,9 @@ func (c *RefCount) IncReads() {
 
 // DecReads decrements the reads count to this entity.
 func (c *RefCount) DecReads() {
-	if traceback {
-		tracebackEvent(c, c.NumRef(), decReadsEvent)
-	}
-
+	tracebackEvent(c, c.NumRef(), decReadsEvent)
 	n := atomic.AddInt32(&c.reads, -1)
+
 	if ref := c.NumRef(); ref < 1 {
 		err := fmt.Errorf("read finish after free: reads=%d, ref=%d", n, ref)
 		panicRef(c, err)
@@ -137,17 +121,15 @@ func (c *RefCount) NumReaders() int {
 
 // IncWrites increments the writes count to this entity.
 func (c *RefCount) IncWrites() {
-	if traceback {
-		tracebackEvent(c, c.NumRef(), incWritesEvent)
-	}
-
+	tracebackEvent(c, c.NumRef(), incWritesEvent)
 	n := atomic.AddInt32(&c.writes, 1)
-
 	ref := c.NumRef()
+
 	if n > 0 && ref < 1 {
 		err := fmt.Errorf("write after free: writes=%d, ref=%d", n, ref)
 		panicRef(c, err)
 	}
+
 	if n > 1 {
 		err := fmt.Errorf("double write: writes=%d, ref=%d", n, ref)
 		panicRef(c, err)
@@ -156,11 +138,9 @@ func (c *RefCount) IncWrites() {
 
 // DecWrites decrements the writes count to this entity.
 func (c *RefCount) DecWrites() {
-	if traceback {
-		tracebackEvent(c, c.NumRef(), decWritesEvent)
-	}
-
+	tracebackEvent(c, c.NumRef(), decWritesEvent)
 	n := atomic.AddInt32(&c.writes, -1)
+
 	if ref := c.NumRef(); ref < 1 {
 		err := fmt.Errorf("write finish after free: writes=%d, ref=%d", n, ref)
 		panicRef(c, err)
@@ -175,7 +155,7 @@ func (c *RefCount) NumWriters() int {
 // TrackObject sets up the initial internal state of the Ref for
 // leak detection.
 func (c *RefCount) TrackObject(v interface{}) {
-	if atomic.LoadUint64(&leakDetectionFlag) == 0 {
+	if !leakDetectionFlag {
 		return
 	}
 

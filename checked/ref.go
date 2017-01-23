@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
-	"sync"
 	"sync/atomic"
 	"unsafe"
 )
@@ -205,40 +204,4 @@ func (c *RefCount) TrackObject(v interface{}) {
 		leaks.M[origin] += uint64(size)
 		leaks.Unlock()
 	})
-}
-
-// EnableLeakDetection turns leak detection on.
-func EnableLeakDetection() {
-	atomic.StoreUint64(&leakDetectionFlag, 1)
-}
-
-// DisableLeakDetection turns leak detection off.
-func DisableLeakDetection() {
-	atomic.StoreUint64(&leakDetectionFlag, 0)
-}
-
-// DumpLeaks returns all detected leaks so far.
-func DumpLeaks() []string {
-	var r []string
-
-	leaks.RLock()
-
-	for k, v := range leaks.M {
-		r = append(r, fmt.Sprintf("leaked %d bytes, origin:\n%s", v, k))
-	}
-
-	leaks.RUnlock()
-
-	return r
-}
-
-var leakDetectionFlag uint64
-
-var leaks struct {
-	sync.RWMutex
-	M map[string]uint64
-}
-
-func init() {
-	leaks.M = make(map[string]uint64)
 }

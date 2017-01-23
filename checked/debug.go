@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -35,17 +36,25 @@ const (
 )
 
 var (
-	traceback            = defaultTraceback
-	tracebackCycles      = defaultTracebackCycles
-	tracebackMaxDepth    = defaultTracebackMaxDepth
-	tracebackCallersPool = sync.Pool{New: func() interface{} {
-		return make([]uintptr, tracebackMaxDepth)
-	}}
-	tracebackEntryPool = sync.Pool{New: func() interface{} {
-		return &debuggerEntry{}
-	}}
-	panicFn = defaultPanic
+	traceback         = defaultTraceback
+	tracebackCycles   = defaultTracebackCycles
+	tracebackMaxDepth = defaultTracebackMaxDepth
+	panicFn           = defaultPanic
+	leakDetectionFlag uint64
 )
+
+var tracebackCallersPool = sync.Pool{New: func() interface{} {
+	return make([]uintptr, tracebackMaxDepth)
+}}
+
+var tracebackEntryPool = sync.Pool{New: func() interface{} {
+	return &debuggerEntry{}
+}}
+
+var leaks struct {
+	sync.RWMutex
+	M map[string]uint64
+}
 
 // PanicFn is a panic function to call on invalid checked state
 type PanicFn func(e error)
@@ -69,9 +78,14 @@ func defaultPanic(e error) {
 	panic(e)
 }
 
-// SetTraceback sets whether to traceback events
-func SetTraceback(value bool) {
-	traceback = value
+// EnableTracebacks turns traceback collection for events on
+func EnableTracebacks() {
+	traceback = true
+}
+
+// DisableTracebacks turns traceback collection for events off
+func DisableTracebacks() {
+	traceback = false
 }
 
 // SetTracebackCycles sets the count of traceback cycles to keep if enabled
@@ -256,4 +270,33 @@ func tracebackEvent(c *RefCount, ref int, e debuggerEvent) {
 	skipEntry := 2
 	n := runtime.Callers(skipEntry, pc)
 	d.append(e, ref, pc[:n])
+}
+
+// EnableLeakDetection turns leak detection on.
+func EnableLeakDetection() {
+	atomic.StoreUint64(&leakDetectionFlag, 1)
+}
+
+// DisableLeakDetection turns leak detection off.
+func DisableLeakDetection() {
+	atomic.StoreUint64(&leakDetectionFlag, 0)
+}
+
+// DumpLeaks returns all detected leaks so far.
+func DumpLeaks() []string {
+	var r []string
+
+	leaks.RLock()
+
+	for k, v := range leaks.M {
+		r = append(r, fmt.Sprintf("leaked %d bytes, origin:\n%s", v, k))
+	}
+
+	leaks.RUnlock()
+
+	return r
+}
+
+func init() {
+	leaks.M = make(map[string]uint64)
 }

@@ -209,6 +209,7 @@ func TestRefCountWriteFinishAfterFree(t *testing.T) {
 
 func TestLeakDetection(t *testing.T) {
 	EnableLeakDetection()
+	defer DisableLeakDetection()
 
 	{
 		v := &RefCount{}

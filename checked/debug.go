@@ -53,7 +53,7 @@ var tracebackEntryPool = sync.Pool{New: func() interface{} {
 
 var leaks struct {
 	sync.RWMutex
-	M map[string]uint64
+	m map[string]uint64
 }
 
 // PanicFn is a panic function to call on invalid checked state
@@ -110,7 +110,7 @@ func DumpLeaks() []string {
 
 	leaks.RLock()
 
-	for k, v := range leaks.M {
+	for k, v := range leaks.m {
 		r = append(r, fmt.Sprintf("leaked %d bytes, origin:\n%s", v, k))
 	}
 
@@ -303,5 +303,5 @@ func tracebackEvent(c *RefCount, ref int, e debuggerEvent) {
 }
 
 func init() {
-	leaks.M = make(map[string]uint64)
+	leaks.m = make(map[string]uint64)
 }

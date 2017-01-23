@@ -181,7 +181,7 @@ func (c *RefCount) TrackObject(v interface{}) {
 
 		leaks.Lock()
 		// Keep track of bytes leaked, not objects.
-		leaks.M[origin] += uint64(size)
+		leaks.m[origin] += uint64(size)
 		leaks.Unlock()
 	})
 }

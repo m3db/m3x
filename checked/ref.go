@@ -176,7 +176,7 @@ func (c *RefCount) NumWriters() int {
 // TrackObject sets up the initial internal state of the Ref for
 // leak detection.
 func (c *RefCount) TrackObject(v interface{}) {
-	if atomic.LoadUint64(&_LeakDetectionFlag) == 0 {
+	if atomic.LoadUint64(&leakDetectionFlag) == 0 {
 		return
 	}
 
@@ -200,45 +200,45 @@ func (c *RefCount) TrackObject(v interface{}) {
 
 		origin := getDebuggerRef(c).String()
 
-		_Leaks.Lock()
+		leaks.Lock()
 		// Keep track of bytes leaked, not objects.
-		_Leaks.M[origin] += uint64(size)
-		_Leaks.Unlock()
+		leaks.M[origin] += uint64(size)
+		leaks.Unlock()
 	})
 }
 
 // EnableLeakDetection turns leak detection on.
 func EnableLeakDetection() {
-	atomic.StoreUint64(&_LeakDetectionFlag, 1)
+	atomic.StoreUint64(&leakDetectionFlag, 1)
 }
 
 // DisableLeakDetection turns leak detection off.
 func DisableLeakDetection() {
-	atomic.StoreUint64(&_LeakDetectionFlag, 0)
+	atomic.StoreUint64(&leakDetectionFlag, 0)
 }
 
 // DumpLeaks returns all detected leaks so far.
 func DumpLeaks() []string {
 	var r []string
 
-	_Leaks.RLock()
+	leaks.RLock()
 
-	for k, v := range _Leaks.M {
+	for k, v := range leaks.M {
 		r = append(r, fmt.Sprintf("leaked %d bytes, origin:\n%s", v, k))
 	}
 
-	_Leaks.RUnlock()
+	leaks.RUnlock()
 
 	return r
 }
 
-var _LeakDetectionFlag uint64
+var leakDetectionFlag uint64
 
-var _Leaks struct {
+var leaks struct {
 	sync.RWMutex
 	M map[string]uint64
 }
 
 func init() {
-	_Leaks.M = make(map[string]uint64)
+	leaks.M = make(map[string]uint64)
 }

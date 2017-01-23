@@ -218,9 +218,13 @@ func TestLeakDetection(t *testing.T) {
 
 	runtime.GC()
 
-	// Finalizers are run in a separate goroutine, so we have to wait
-	// a little bit here.
-	time.Sleep(100 * time.Millisecond)
+	var l []string
 
-	assert.NotEmpty(t, DumpLeaks())
+	for ; len(l) == 0; l = DumpLeaks() {
+		// Finalizers are run in a separate goroutine, so we have to wait
+		// a little bit here.
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	assert.NotEmpty(t, l)
 }

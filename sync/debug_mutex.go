@@ -8,29 +8,25 @@ import (
 	"time"
 )
 
-const _StackDepth = 16
-
 // DebugMutex is a RWMutex that tracks its ownership.
-type DebugMutex struct {
-	m sync.RWMutex
-}
+type DebugMutex sync.RWMutex
 
 // RLock locks DebugMutex for reading.
-func (m *DebugMutex) RLock() { m.m.RLock() }
+func (m *DebugMutex) RLock() { (*sync.RWMutex)(m).RLock() }
 
 // RUnlock undoes a single RLock call.
-func (m *DebugMutex) RUnlock() { m.m.RUnlock() }
+func (m *DebugMutex) RUnlock() { (*sync.RWMutex)(m).RUnlock() }
 
 // Lock locks DebugMutex for writing.
 func (m *DebugMutex) Lock() {
-	m.m.Lock()
+	(*sync.RWMutex)(m).Lock()
 	insert(m)
 }
 
 // Unlock unlocks DebugMutex for writing.
 func (m *DebugMutex) Unlock() {
 	remove(m)
-	m.m.Unlock()
+	(*sync.RWMutex)(m).Unlock()
 }
 
 // RLocker returns a Locker interface implemented via calls to RLock
@@ -41,8 +37,8 @@ func (m *DebugMutex) RLocker() sync.Locker {
 
 type rlocker DebugMutex
 
-func (r *rlocker) Lock()   { r.m.RLock() }
-func (r *rlocker) Unlock() { r.m.RUnlock() }
+func (r *rlocker) Lock()   { (*sync.RWMutex)(r).RLock() }
+func (r *rlocker) Unlock() { (*sync.RWMutex)(r).RUnlock() }
 
 var mutexDebuggingFlag bool
 
@@ -55,6 +51,8 @@ func DisableMutexDebugging() {
 func EnableMutexDebugging() {
 	mutexDebuggingFlag = true
 }
+
+const _StackDepth = 16
 
 type lockInfo struct {
 	ts time.Time

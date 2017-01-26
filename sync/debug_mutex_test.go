@@ -12,17 +12,17 @@ func TestDebugMutex(t *testing.T) {
 
 	m := &DebugMutex{}
 
-	assert.Empty(t, DumpOwned())
+	assert.Empty(t, DumpLocks())
 
 	m.Lock()
-	assert.NotEmpty(t, DumpOwned())
+	assert.NotEmpty(t, DumpLocks())
 
 	m.Unlock()
-	assert.Empty(t, DumpOwned())
+	assert.Empty(t, DumpLocks())
 
 	m.RLock()
-	assert.Empty(t, DumpOwned())
+	assert.Empty(t, DumpLocks())
 
 	m.RUnlock()
-	assert.Empty(t, DumpOwned())
+	assert.Empty(t, DumpLocks())
 }

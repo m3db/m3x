@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
+	"time"
 )
 
 const _StackDepth = 16
@@ -55,9 +56,14 @@ func EnableMutexDebugging() {
 	mutexDebuggingFlag = true
 }
 
-var activeLocks struct {
+type lockInfo struct {
+	ts time.Time
+	cs []uintptr
+}
+
+var locks struct {
 	sync.Mutex
-	m map[*DebugMutex][]uintptr
+	m map[*DebugMutex]lockInfo
 }
 
 func insert(m *DebugMutex) {
@@ -68,9 +74,9 @@ func insert(m *DebugMutex) {
 	r := make([]uintptr, _StackDepth)
 	n := runtime.Callers(3, r)
 
-	activeLocks.Lock()
-	activeLocks.m[m] = r[:n]
-	activeLocks.Unlock()
+	locks.Lock()
+	locks.m[m] = lockInfo{time.Now(), r[:n]}
+	locks.Unlock()
 }
 
 func remove(m *DebugMutex) {
@@ -78,12 +84,12 @@ func remove(m *DebugMutex) {
 		return
 	}
 
-	activeLocks.Lock()
-	delete(activeLocks.m, m)
-	activeLocks.Unlock()
+	locks.Lock()
+	delete(locks.m, m)
+	locks.Unlock()
 }
 
-func owner(l []uintptr) string {
+func traceback(l []uintptr) string {
 	var (
 		b    = new(bytes.Buffer)
 		n    runtime.Frame
@@ -98,21 +104,22 @@ func owner(l []uintptr) string {
 	return b.String()
 }
 
-// DumpOwned returns all currently locked mutexes.
-func DumpOwned() []string {
+// DumpLocks returns all currently locked mutexes.
+func DumpLocks() []string {
 	var r []string
 
-	activeLocks.Lock()
+	locks.Lock()
 
-	for m, l := range activeLocks.m {
-		r = append(r, fmt.Sprintf("mutex @ %p\n%s", m, owner(l)))
+	for m, l := range locks.m {
+		r = append(r, fmt.Sprintf(
+			"%p @ %s\n%s", m, time.Since(l.ts), traceback(l.cs)))
 	}
 
-	activeLocks.Unlock()
+	locks.Unlock()
 
 	return r
 }
 
 func init() {
-	activeLocks.m = make(map[*DebugMutex][]uintptr)
+	locks.m = make(map[*DebugMutex]lockInfo)
 }

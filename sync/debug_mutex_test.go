@@ -10,7 +10,7 @@ func TestDebugMutex(t *testing.T) {
 	EnableMutexDebugging()
 	defer DisableMutexDebugging()
 
-	m := &DebugMutex{}
+	m := &DebugRWMutex{}
 
 	assert.Empty(t, DumpLocks())
 
@@ -25,4 +25,20 @@ func TestDebugMutex(t *testing.T) {
 
 	m.RUnlock()
 	assert.Empty(t, DumpLocks())
+}
+
+func TestDebugMutexContention(t *testing.T) {
+	SetMutexContentionTrigger(2)
+
+	EnableMutexDebugging()
+	defer DisableMutexDebugging()
+
+	m := &DebugRWMutex{}
+
+	m.RLock()
+	m.RLock()
+
+	assert.Panics(t, func() {
+		m.Lock()
+	})
 }

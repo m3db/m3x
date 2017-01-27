@@ -5,42 +5,62 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
-// DebugMutex is a RWMutex that tracks its ownership.
-type DebugMutex sync.RWMutex
-
-// RLock locks DebugMutex for reading.
-func (m *DebugMutex) RLock() { (*sync.RWMutex)(m).RLock() }
-
-// RUnlock undoes a single RLock call.
-func (m *DebugMutex) RUnlock() { (*sync.RWMutex)(m).RUnlock() }
-
-// Lock locks DebugMutex for writing.
-func (m *DebugMutex) Lock() {
-	(*sync.RWMutex)(m).Lock()
-	insert(m)
+// DebugRWMutex is a RWMutex that tracks its ownership.
+type DebugRWMutex struct {
+	m sync.RWMutex
+	r int64 // The number of readers.
 }
 
-// Unlock unlocks DebugMutex for writing.
-func (m *DebugMutex) Unlock() {
-	remove(m)
-	(*sync.RWMutex)(m).Unlock()
+// Lock locks DebugRWMutex for writing.
+func (m *DebugRWMutex) Lock() {
+	if mutexDebuggingFlag &&
+		atomic.LoadInt64(&m.r) >= int64(mutexContentionTrigger) {
+		panic("debug: contention @ " + traceback(callstack(0)))
+	}
+
+	m.m.Lock()
+	track(m, lock)
+}
+
+// Unlock unlocks DebugRWMutex for writing.
+func (m *DebugRWMutex) Unlock() {
+	track(m, unlock)
+	m.m.Unlock()
+}
+
+// RLock locks DebugRWMutex for reading.
+func (m *DebugRWMutex) RLock() {
+	m.m.RLock()
+	track(m, rlock)
+}
+
+// RUnlock undoes a single RLock call.
+func (m *DebugRWMutex) RUnlock() {
+	track(m, runlock)
+	m.m.RUnlock()
 }
 
 // RLocker returns a Locker interface implemented via calls to RLock
 // and RUnlock.
-func (m *DebugMutex) RLocker() sync.Locker {
+func (m *DebugRWMutex) RLocker() sync.Locker {
 	return (*rlocker)(m)
 }
 
-type rlocker DebugMutex
+type rlocker DebugRWMutex
 
-func (r *rlocker) Lock()   { (*sync.RWMutex)(r).RLock() }
-func (r *rlocker) Unlock() { (*sync.RWMutex)(r).RUnlock() }
+func (r *rlocker) Lock()   { (*DebugRWMutex)(r).RLock() }
+func (r *rlocker) Unlock() { (*DebugRWMutex)(r).RUnlock() }
 
-var mutexDebuggingFlag bool
+const _StackDepth = 16
+
+var (
+	mutexDebuggingFlag     bool
+	mutexContentionTrigger = 10
+)
 
 // DisableMutexDebugging turns mutex debugging off.
 func DisableMutexDebugging() {
@@ -52,7 +72,20 @@ func EnableMutexDebugging() {
 	mutexDebuggingFlag = true
 }
 
-const _StackDepth = 16
+// SetMutexContentionTrigger sets the minimum number of concurrent
+// readers for a write lock attempt to trigger a panic.
+func SetMutexContentionTrigger(n int) {
+	mutexContentionTrigger = n
+}
+
+type mutexOp int
+
+const (
+	lock mutexOp = iota
+	unlock
+	rlock
+	runlock
+)
 
 type lockInfo struct {
 	ts time.Time
@@ -61,30 +94,35 @@ type lockInfo struct {
 
 var locks struct {
 	sync.Mutex
-	m map[*DebugMutex]lockInfo
+	m map[*DebugRWMutex]lockInfo
 }
 
-func insert(m *DebugMutex) {
+func track(m *DebugRWMutex, op mutexOp) {
 	if !mutexDebuggingFlag {
 		return
 	}
 
+	switch op {
+	case lock:
+		locks.Lock()
+		locks.m[m] = lockInfo{time.Now(), callstack(1)}
+		locks.Unlock()
+	case unlock:
+		locks.Lock()
+		delete(locks.m, m)
+		locks.Unlock()
+	case rlock:
+		atomic.AddInt64(&m.r, +1)
+	case runlock:
+		atomic.AddInt64(&m.r, -1)
+	}
+}
+
+func callstack(skip int) []uintptr {
 	r := make([]uintptr, _StackDepth)
-	n := runtime.Callers(3, r)
+	n := runtime.Callers(skip+2, r) // Skips the caller & itself.
 
-	locks.Lock()
-	locks.m[m] = lockInfo{time.Now(), r[:n]}
-	locks.Unlock()
-}
-
-func remove(m *DebugMutex) {
-	if !mutexDebuggingFlag {
-		return
-	}
-
-	locks.Lock()
-	delete(locks.m, m)
-	locks.Unlock()
+	return r[:n]
 }
 
 func traceback(l []uintptr) string {
@@ -119,5 +157,5 @@ func DumpLocks() []string {
 }
 
 func init() {
-	locks.m = make(map[*DebugMutex]lockInfo)
+	locks.m = make(map[*DebugRWMutex]lockInfo)
 }

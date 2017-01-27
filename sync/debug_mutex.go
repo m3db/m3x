@@ -127,14 +127,14 @@ func callstack(skip int) []uintptr {
 
 func traceback(l []uintptr) string {
 	var (
-		b    = new(bytes.Buffer)
 		n    runtime.Frame
 		more = len(l) != 0
+		b    bytes.Buffer
 	)
 
 	for f := runtime.CallersFrames(l); more; {
 		n, more = f.Next()
-		fmt.Fprintf(b, "%s:%d\n\t%s\n", n.File, n.Line, n.Function)
+		fmt.Fprintf(&b, "%s:%d\n\t%s\n", n.File, n.Line, n.Function)
 	}
 
 	return b.String()

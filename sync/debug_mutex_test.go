@@ -12,19 +12,19 @@ func TestDebugMutex(t *testing.T) {
 
 	m := &DebugRWMutex{}
 
-	assert.Empty(t, DumpLocks())
+	assert.Empty(t, DumpLocks(0))
 
 	m.Lock()
-	assert.NotEmpty(t, DumpLocks())
+	assert.NotEmpty(t, DumpLocks(0))
 
 	m.Unlock()
-	assert.Empty(t, DumpLocks())
+	assert.Empty(t, DumpLocks(0))
 
 	m.RLock()
-	assert.Empty(t, DumpLocks())
+	assert.Empty(t, DumpLocks(0))
 
 	m.RUnlock()
-	assert.Empty(t, DumpLocks())
+	assert.Empty(t, DumpLocks(0))
 }
 
 func TestDebugMutexContention(t *testing.T) {

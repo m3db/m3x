@@ -23,12 +23,12 @@ func (m *DebugRWMutex) Lock() {
 	}
 
 	m.m.Lock()
-	track(m, lock)
+	track(m, wlock)
 }
 
 // Unlock unlocks DebugRWMutex for writing.
 func (m *DebugRWMutex) Unlock() {
-	track(m, unlock)
+	track(m, wunlock)
 	m.m.Unlock()
 }
 
@@ -81,8 +81,8 @@ func SetMutexContentionTrigger(n int) {
 type mutexOp int
 
 const (
-	lock mutexOp = iota
-	unlock
+	wlock mutexOp = iota
+	wunlock
 	rlock
 	runlock
 )
@@ -103,11 +103,11 @@ func track(m *DebugRWMutex, op mutexOp) {
 	}
 
 	switch op {
-	case lock:
+	case wlock:
 		locks.Lock()
 		locks.m[m] = lockInfo{time.Now(), callstack(1)}
 		locks.Unlock()
-	case unlock:
+	case wunlock:
 		locks.Lock()
 		delete(locks.m, m)
 		locks.Unlock()
@@ -140,15 +140,17 @@ func traceback(l []uintptr) string {
 	return b.String()
 }
 
-// DumpLocks returns all currently locked mutexes.
-func DumpLocks() []string {
+// DumpLocks returns all mutexes locked for more than `minimum` time.
+func DumpLocks(minimum time.Duration) []string {
 	var r []string
 
 	locks.Lock()
 
 	for m, l := range locks.m {
-		r = append(r, fmt.Sprintf(
-			"%p @ %s\n%s", m, time.Since(l.ts), traceback(l.cs)))
+		if d := time.Since(l.ts); d >= minimum {
+			r = append(r,
+				fmt.Sprintf("%p @ %s\n%s", m, d, traceback(l.cs)))
+		}
 	}
 
 	locks.Unlock()

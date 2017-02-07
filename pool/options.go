@@ -32,6 +32,7 @@ type objectPoolOptions struct {
 	refillLowWatermark  float64
 	refillHighWatermark float64
 	instrumentOpts      instrument.Options
+	onPoolAccessError   OnPoolAccessError
 }
 
 // NewObjectPoolOptions creates a new set of object pool options
@@ -40,6 +41,7 @@ func NewObjectPoolOptions() ObjectPoolOptions {
 		size:               defaultSize,
 		refillLowWatermark: defaultRefillLowWatermark,
 		instrumentOpts:     instrument.NewOptions(),
+		onPoolAccessError:  func(err error) { panic(err) },
 	}
 }
 
@@ -81,4 +83,14 @@ func (o *objectPoolOptions) SetInstrumentOptions(value instrument.Options) Objec
 
 func (o *objectPoolOptions) InstrumentOptions() instrument.Options {
 	return o.instrumentOpts
+}
+
+func (o *objectPoolOptions) SetOnPoolAccessError(value OnPoolAccessError) ObjectPoolOptions {
+	opts := *o
+	opts.onPoolAccessError = value
+	return &opts
+}
+
+func (o *objectPoolOptions) OnPoolAccessError() OnPoolAccessError {
+	return o.onPoolAccessError
 }

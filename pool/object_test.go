@@ -64,7 +64,7 @@ func TestObjectPoolRefillOnLowWaterMark(t *testing.T) {
 
 func TestObjectPoolInitTwiceError(t *testing.T) {
 	var accessErr error
-	opts := NewObjectPoolOptions().SetOnPoolAccessError(func(err error) {
+	opts := NewObjectPoolOptions().SetOnPoolAccessErrorFn(func(err error) {
 		accessErr = err
 	})
 
@@ -85,7 +85,7 @@ func TestObjectPoolInitTwiceError(t *testing.T) {
 
 func TestObjectPoolGetBeforeInitError(t *testing.T) {
 	var accessErr error
-	opts := NewObjectPoolOptions().SetOnPoolAccessError(func(err error) {
+	opts := NewObjectPoolOptions().SetOnPoolAccessErrorFn(func(err error) {
 		accessErr = err
 	})
 
@@ -103,7 +103,7 @@ func TestObjectPoolGetBeforeInitError(t *testing.T) {
 
 func TestObjectPoolPutBeforeInitError(t *testing.T) {
 	var accessErr error
-	opts := NewObjectPoolOptions().SetOnPoolAccessError(func(err error) {
+	opts := NewObjectPoolOptions().SetOnPoolAccessErrorFn(func(err error) {
 		accessErr = err
 	})
 

@@ -34,18 +34,18 @@ func TestHashDistribution(t *testing.T) {
 
 	numBuckets := []int64{10, 100, 1000, 10000}
 	for i, n := range numBuckets {
-		keysPerBucket := uint64(n) * 1000
-		stepSize := math.MaxUint64 / keysPerBucket
+		totalKeys := uint64(n) * 1000
+		stepSize := math.MaxUint64 / totalKeys
 		buckets := make(map[int64]int, n)
 
 		var hash, j uint64
-		for ; j < keysPerBucket; j++ {
+		for ; j < totalKeys; j++ {
 			idx := Hash(hash, n)
 			buckets[idx]++
 			hash += stepSize
 		}
 
-		expected := float64(keysPerBucket) / float64(n)
+		expected := float64(totalKeys) / float64(n)
 		var testStatistic float64
 		for _, observed := range buckets {
 			diff := float64(observed) - expected
@@ -64,21 +64,21 @@ func TestHashMoved(t *testing.T) {
 	numBuckets := []int64{10, 100, 1000}
 
 	for _, n := range numBuckets {
-		keysPerBucket := uint64(n) * 1000
-		stepSize := math.MaxUint64 / keysPerBucket
-		oldBuckets := make(map[uint64]int64, keysPerBucket)
+		totalKeys := uint64(n) * 1000
+		stepSize := math.MaxUint64 / totalKeys
+		oldBuckets := make(map[uint64]int64, totalKeys)
 
 		var hash, j uint64
-		for ; j < keysPerBucket; j++ {
+		for ; j < totalKeys; j++ {
 			idx := Hash(hash, n)
 			oldBuckets[hash] = idx
 			hash += stepSize
 		}
 
-		newBuckets := make(map[uint64]int64, keysPerBucket)
+		newBuckets := make(map[uint64]int64, totalKeys)
 
 		hash, j = 0, 0
-		for ; hash < keysPerBucket; hash++ {
+		for ; hash < totalKeys; hash++ {
 			idx := Hash(hash, n+1)
 			newBuckets[hash] = idx
 			hash += stepSize
@@ -86,13 +86,13 @@ func TestHashMoved(t *testing.T) {
 
 		var numMoved int
 		hash = 0
-		for ; hash < keysPerBucket; hash++ {
+		for ; hash < totalKeys; hash++ {
 			if oldBuckets[hash] != newBuckets[hash] {
 				numMoved++
 			}
 		}
 
-		movedPercent := float64(numMoved) / float64(keysPerBucket)
+		movedPercent := float64(numMoved) / float64(totalKeys)
 		idealPercent := 1.0 / float64(n+1)
 
 		// To test that Hash is redistributing approximately the ideal number of keys we require that

@@ -21,6 +21,7 @@
 package jump
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,12 +35,14 @@ func TestHashDistribution(t *testing.T) {
 	numBuckets := []int64{10, 100, 1000, 10000}
 	for i, n := range numBuckets {
 		maxNum := uint64(n) * 1000
+		stepSize := math.MaxUint64 / maxNum
 		buckets := make(map[int64]int, n)
 
-		var hash uint64
-		for ; hash < maxNum; hash++ {
+		var hash, j uint64
+		for ; j < maxNum; j++ {
 			idx := Hash(hash, n)
 			buckets[idx]++
+			hash += stepSize
 		}
 
 		expected := float64(maxNum) / float64(n)
@@ -62,20 +65,23 @@ func TestHashMoved(t *testing.T) {
 
 	for _, n := range numBuckets {
 		maxNum := uint64(n) * 1000
+		stepSize := math.MaxUint64 / maxNum
 		oldBuckets := make(map[uint64]int64, maxNum)
 
-		var hash uint64
-		for ; hash < maxNum; hash++ {
+		var hash, j uint64
+		for ; j < maxNum; j++ {
 			idx := Hash(hash, n)
 			oldBuckets[hash] = idx
+			hash += stepSize
 		}
 
 		newBuckets := make(map[uint64]int64, maxNum)
 
-		hash = 0
+		hash, j = 0, 0
 		for ; hash < maxNum; hash++ {
 			idx := Hash(hash, n+1)
 			newBuckets[hash] = idx
+			hash += stepSize
 		}
 
 		var numMoved int

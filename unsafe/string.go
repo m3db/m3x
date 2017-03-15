@@ -25,7 +25,7 @@ import (
 	"unsafe"
 )
 
-// ImmutableBytes represents an immutable byte slice
+// ImmutableBytes represents an immutable byte slice.
 type ImmutableBytes []byte
 
 // ToBytes converts a string to a byte slice with zero heap memory allocations.
@@ -36,15 +36,26 @@ func ToBytes(s string) ImmutableBytes {
 	if len(s) == 0 {
 		return nil
 	}
-	sh := (*reflect.StringHeader)(unsafe.Pointer(&s))
 
-	// NB(xichen): it is important that we access s in the same expression
-	// where we assign the data pointer of the string header to the data
-	// pointer of the slice header to make sure the underlying bytes don't
-	// get GC'ed before the assignment happens.
-	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: sh.Data,
-		Len:  len(s),
-		Cap:  len(s),
-	}))
+	// NB(xichen): we need to declare a real byte slice so internally the compiler
+	// knows to use an unsafe.Pointer to keep track of the underlying memory so tha
+	// once the slice's array pointer is updated with the pointer to the string's
+	// underlying bytes, the compiler won't prematurely GC the memory when the string
+	// goes out of scope.
+	var b []byte
+	byteHeader := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+
+	// NB(xichen): this makes sure that even if GC relocates the string's underlying
+	// memory after this assignment, the corresponding unsafe.Pointer in the internal
+	// slice struct will be updated accordingly to reflect the memory relocation.
+	byteHeader.Data = (*reflect.StringHeader)(unsafe.Pointer(&s)).Data
+
+	// NB(xichen): it is important that we access s after we assign the Data
+	// pointer of the string header to the Data pointer of the slice header to
+	// make sure the string (and the underlying bytes backing the string) don't get
+	// GC'ed before the assignment happens.
+	l := len(s)
+	byteHeader.Len = l
+	byteHeader.Cap = l
+	return b
 }

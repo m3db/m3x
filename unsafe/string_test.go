@@ -22,6 +22,7 @@ package xunsafe
 
 import (
 	"bytes"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,4 +46,22 @@ func TestToBytesLargeString(t *testing.T) {
 	require.Equal(t, []byte(str), []byte(b))
 	require.Equal(t, len(str), len(b))
 	require.Equal(t, len(str), cap(b))
+}
+
+func TestToBytesStillValidAfterStringIsGCed(t *testing.T) {
+	b := testStringToBytes()
+
+	// The source string is now out of scope, forcing a GC
+	runtime.GC()
+
+	// Assert the underlying byte slice is still valid
+	require.Equal(t, []byte("foobarbaz"), []byte(b))
+	require.Equal(t, 9, len(b))
+	require.Equal(t, 9, cap(b))
+}
+
+func testStringToBytes() []byte {
+	str := "foobarbaz"
+	b := ToBytes(str)
+	return b
 }

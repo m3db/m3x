@@ -78,7 +78,7 @@ func TestHashMoved(t *testing.T) {
 		newBuckets := make(map[uint64]int64, totalKeys)
 
 		hash, j = 0, 0
-		for ; hash < totalKeys; hash++ {
+		for ; j < totalKeys; j++ {
 			idx := Hash(hash, n+1)
 			newBuckets[hash] = idx
 			hash += stepSize
@@ -86,10 +86,11 @@ func TestHashMoved(t *testing.T) {
 
 		var numMoved int
 		hash = 0
-		for ; hash < totalKeys; hash++ {
+		for ; j < totalKeys; j++ {
 			if oldBuckets[hash] != newBuckets[hash] {
 				numMoved++
 			}
+			hash += stepSize
 		}
 
 		movedPercent := float64(numMoved) / float64(totalKeys)

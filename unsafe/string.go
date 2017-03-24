@@ -34,23 +34,23 @@ type BytesFn func(ImmutableBytes)
 // BytesWithArgFn takes an argument alongside the byte slice
 type BytesWithArgFn func(ImmutableBytes, interface{})
 
-// ForBytes converts a string to a byte slice with zero heap memory allocations,
+// WithBytes converts a string to a byte slice with zero heap memory allocations,
 // and calls a function to process the byte slice. It is the caller's responsibility
 // to make sure the callback function passed in does not modify the byte slice
 // in any way, and holds no reference to the byte slice after the function returns.
-func ForBytes(s string, fn BytesFn) {
+func WithBytes(s string, fn BytesFn) {
 	// NB(xichen): regardless of whether the backing array is allocated on the heap
 	// or on the stack, it should still be valid before the string goes out of scope
 	// so it's safe to call the function on the underlying byte slice.
 	fn(toBytes(s))
 }
 
-// ForBytesWithArg converts a string to a byte slice with zero heap memory allocations,
+// WithBytesAndArg converts a string to a byte slice with zero heap memory allocations,
 // and calls a function to process the byte slice alongside one argument. It is the
 // caller's responsibility to make sure the callback function passed in does not modify
 // the byte slice in any way, and holds no reference to the byte slice after the function
 // returns.
-func ForBytesWithArg(s string, arg interface{}, fn BytesWithArgFn) {
+func WithBytesAndArg(s string, arg interface{}, fn BytesWithArgFn) {
 	fn(toBytes(s), arg)
 }
 

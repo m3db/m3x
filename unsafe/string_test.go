@@ -27,44 +27,44 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestForBytesSmallString(t *testing.T) {
+func TestWithBytesSmallString(t *testing.T) {
 	str := "foobarbaz"
-	validateForBytes(t, str)
+	validateWithBytes(t, str)
 }
 
-func TestForBytesLargeString(t *testing.T) {
+func TestWithBytesLargeString(t *testing.T) {
 	var buf bytes.Buffer
 	for i := 0; i < 65536; i++ {
 		buf.WriteByte(byte(i % 256))
 	}
 	str := buf.String()
-	validateForBytes(t, str)
+	validateWithBytes(t, str)
 }
 
-func TestForBytesWithArgSmallString(t *testing.T) {
+func TestWithBytesAndArgSmallString(t *testing.T) {
 	str := "foobarbaz"
-	validateForBytesWithArg(t, str)
+	validateWithBytesAndArg(t, str)
 }
 
-func TestForBytesWithArgLargeString(t *testing.T) {
+func TestWithBytesAndArgLargeString(t *testing.T) {
 	var buf bytes.Buffer
 	for i := 0; i < 65536; i++ {
 		buf.WriteByte(byte(i % 256))
 	}
 	str := buf.String()
-	validateForBytesWithArg(t, str)
+	validateWithBytesAndArg(t, str)
 }
 
-func validateForBytes(t *testing.T, str string) {
-	ForBytes(str, func(b ImmutableBytes) {
+func validateWithBytes(t *testing.T, str string) {
+	WithBytes(str, func(b ImmutableBytes) {
 		require.Equal(t, []byte(str), []byte(b))
 		require.Equal(t, len(str), len(b))
 		require.Equal(t, len(str), cap(b))
 	})
 }
 
-func validateForBytesWithArg(t *testing.T, str string) {
-	ForBytesWithArg(str, "cat", func(data ImmutableBytes, arg interface{}) {
+func validateWithBytesAndArg(t *testing.T, str string) {
+	WithBytesAndArg(str, "cat", func(data ImmutableBytes, arg interface{}) {
 		var buf bytes.Buffer
 		for _, b := range data {
 			buf.WriteByte(b)

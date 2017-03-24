@@ -22,46 +22,54 @@ package xunsafe
 
 import (
 	"bytes"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestToBytesSmallString(t *testing.T) {
+func TestForBytesSmallString(t *testing.T) {
 	str := "foobarbaz"
-	b := ToBytes(str)
-	require.Equal(t, []byte(str), []byte(b))
-	require.Equal(t, len(str), len(b))
-	require.Equal(t, len(str), cap(b))
+	validateForBytes(t, str)
 }
 
-func TestToBytesLargeString(t *testing.T) {
+func TestForBytesLargeString(t *testing.T) {
 	var buf bytes.Buffer
 	for i := 0; i < 65536; i++ {
 		buf.WriteByte(byte(i % 256))
 	}
 	str := buf.String()
-	b := ToBytes(str)
-	require.Equal(t, []byte(str), []byte(b))
-	require.Equal(t, len(str), len(b))
-	require.Equal(t, len(str), cap(b))
+	validateForBytes(t, str)
 }
 
-func TestToBytesStillValidAfterStringIsGCed(t *testing.T) {
-	b := testStringToBytes()
-
-	// The source string is now out of scope, forcing a GC
-	runtime.GC()
-
-	// Assert the underlying byte slice is still valid
-	require.Equal(t, []byte("foobarbaz"), []byte(b))
-	require.Equal(t, 9, len(b))
-	require.Equal(t, 9, cap(b))
-}
-
-func testStringToBytes() []byte {
+func TestForBytesWithArgSmallString(t *testing.T) {
 	str := "foobarbaz"
-	b := ToBytes(str)
-	return b
+	validateForBytesWithArg(t, str)
+}
+
+func TestForBytesWithArgLargeString(t *testing.T) {
+	var buf bytes.Buffer
+	for i := 0; i < 65536; i++ {
+		buf.WriteByte(byte(i % 256))
+	}
+	str := buf.String()
+	validateForBytesWithArg(t, str)
+}
+
+func validateForBytes(t *testing.T, str string) {
+	ForBytes(str, func(b []byte) {
+		require.Equal(t, []byte(str), []byte(b))
+		require.Equal(t, len(str), len(b))
+		require.Equal(t, len(str), cap(b))
+	})
+}
+
+func validateForBytesWithArg(t *testing.T, str string) {
+	ForBytesWithArg(str, "cat", func(data []byte, arg interface{}) {
+		var buf bytes.Buffer
+		for _, b := range data {
+			buf.WriteByte(b)
+		}
+		buf.WriteString(arg.(string))
+		require.Equal(t, str+"cat", buf.String())
+	})
 }

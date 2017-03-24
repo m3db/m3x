@@ -31,8 +31,8 @@ type ImmutableBytes []byte
 // BytesFn processes a byte slice
 type BytesFn func(ImmutableBytes)
 
-// BytesWithArgFn takes an argument alongside the byte slice
-type BytesWithArgFn func(ImmutableBytes, interface{})
+// BytesAndArgFn takes an argument alongside the byte slice
+type BytesAndArgFn func(ImmutableBytes, interface{})
 
 // WithBytes converts a string to a byte slice with zero heap memory allocations,
 // and calls a function to process the byte slice. It is the caller's responsibility
@@ -50,7 +50,7 @@ func WithBytes(s string, fn BytesFn) {
 // caller's responsibility to make sure the callback function passed in does not modify
 // the byte slice in any way, and holds no reference to the byte slice after the function
 // returns.
-func WithBytesAndArg(s string, arg interface{}, fn BytesWithArgFn) {
+func WithBytesAndArg(s string, arg interface{}, fn BytesAndArgFn) {
 	fn(toBytes(s), arg)
 }
 

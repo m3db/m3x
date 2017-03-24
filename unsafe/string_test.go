@@ -56,7 +56,7 @@ func TestForBytesWithArgLargeString(t *testing.T) {
 }
 
 func validateForBytes(t *testing.T, str string) {
-	ForBytes(str, func(b []byte) {
+	ForBytes(str, func(b ImmutableBytes) {
 		require.Equal(t, []byte(str), []byte(b))
 		require.Equal(t, len(str), len(b))
 		require.Equal(t, len(str), cap(b))
@@ -64,7 +64,7 @@ func validateForBytes(t *testing.T, str string) {
 }
 
 func validateForBytesWithArg(t *testing.T, str string) {
-	ForBytesWithArg(str, "cat", func(data []byte, arg interface{}) {
+	ForBytesWithArg(str, "cat", func(data ImmutableBytes, arg interface{}) {
 		var buf bytes.Buffer
 		for _, b := range data {
 			buf.WriteByte(b)

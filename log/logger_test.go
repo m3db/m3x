@@ -20,8 +20,11 @@
 
 package xlog
 
-import "testing"
-import "github.com/stretchr/testify/require"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestNullLogger(t *testing.T) {
 	require.NotPanics(t, func() {

@@ -122,7 +122,7 @@ func (f Fields) Len() int { return len(f) }
 func (f Fields) ValueAt(i int) LogField { return f[i] }
 
 // NullLogger is a logger that emits nowhere
-var NullLogger Logger = nullLogger{fields: Fields([]LogField{})}
+var NullLogger Logger = nullLogger{}
 
 type nullLogger struct {
 	fields LogFields
@@ -143,8 +143,14 @@ func (l nullLogger) Fields() LogFields                    { return l.fields }
 
 func (l nullLogger) WithFields(newFields ...LogField) Logger {
 	existingFields := l.Fields()
-	fields := make([]LogField, 0, existingFields.Len()+len(newFields))
-	for i := 0; i < existingFields.Len(); i++ {
+	if existingFields == nil {
+		existingFields = Fields([]LogField{})
+		l.fields = existingFields
+	}
+
+	existingLen := existingFields.Len()
+	fields := make([]LogField, 0, existingLen+len(newFields))
+	for i := 0; i < existingLen; i++ {
 		fields = append(fields, existingFields.ValueAt(i))
 	}
 	fields = append(fields, newFields...)

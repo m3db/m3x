@@ -122,7 +122,7 @@ func (f Fields) Len() int { return len(f) }
 func (f Fields) ValueAt(i int) LogField { return f[i] }
 
 // NullLogger is a logger that emits nowhere
-var NullLogger Logger = nullLogger{}
+var NullLogger Logger = nullLogger{fields: Fields([]LogField{})}
 
 type nullLogger struct {
 	fields LogFields

@@ -13,14 +13,8 @@ const (
 listen_address: localhost:4385
 buffer_space: 1024
 servers:
-    - somewhere-sjc1:8090
-    - somewhere-else-sjc1:8010
-`
-
-	invalidConfig = `
-listen_address:
-buffer_space: 1
-servers:
+    - server1:8090
+    - server2:8010
 `
 )
 
@@ -45,11 +39,15 @@ func TestLoadWithInvalidFile(t *testing.T) {
 	fname := writeFile(t, goodConfig)
 	defer os.Remove(fname)
 
+	// invalid yaml file
+	err = LoadFiles(&cfg, "./config.go")
+	require.Error(t, err)
+
 	// non-exist file in the file list
 	err = LoadFiles(&cfg, fname, "./no-config.yaml")
 	require.Error(t, err)
 
-	// invalid yaml file
+	// invalid file in the file list
 	err = LoadFiles(&cfg, fname, "./config.go")
 	require.Error(t, err)
 }
@@ -58,7 +56,12 @@ func TestLoadFilesExtends(t *testing.T) {
 	fname := writeFile(t, goodConfig)
 	defer os.Remove(fname)
 
-	partialConfig := "buffer_space: 8080"
+	partialConfig := `
+buffer_space: 8080
+servers:
+    - server3:8080
+    - server4:8080
+`
 	partial := writeFile(t, partialConfig)
 	defer os.Remove(partial)
 
@@ -68,7 +71,7 @@ func TestLoadFilesExtends(t *testing.T) {
 
 	require.Equal(t, "localhost:4385", cfg.ListenAddress)
 	require.Equal(t, 8080, cfg.BufferSpace)
-	require.Equal(t, []string{"somewhere-sjc1:8090", "somewhere-else-sjc1:8010"}, cfg.Servers)
+	require.Equal(t, []string{"server3:8080", "server4:8080"}, cfg.Servers)
 }
 
 func TestLoadFilesValidateOnce(t *testing.T) {
@@ -81,7 +84,7 @@ func TestLoadFilesValidateOnce(t *testing.T) {
 	const invalidConfig2 = `
     listen_address: "localhost:8080"
     servers:
-      - somewhere-else-sjc1:8010
+      - server2:8010
     `
 
 	fname1 := writeFile(t, invalidConfig1)
@@ -106,7 +109,7 @@ func TestLoadFilesValidateOnce(t *testing.T) {
 
 	require.Equal(t, "localhost:8080", mergedCfg.ListenAddress)
 	require.Equal(t, 256, mergedCfg.BufferSpace)
-	require.Equal(t, []string{"somewhere-else-sjc1:8010"}, mergedCfg.Servers)
+	require.Equal(t, []string{"server2:8010"}, mergedCfg.Servers)
 }
 
 func writeFile(t *testing.T, contents string) string {

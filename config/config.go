@@ -11,7 +11,8 @@ import (
 // errNoFilesToLoad is return when you attemp to call LoadFiles with no file paths
 var errNoFilesToLoad = errors.New("attempt to load configuration with no files")
 
-// LoadFiles loads a list of files, deep-merging values.
+// LoadFiles loads a config from list of files
+// If value for a property is present in multiple files, the value from the last file will be applied
 // Validation is done after merging all values
 func LoadFiles(config interface{}, fnames ...string) error {
 	if len(fnames) == 0 {
@@ -28,8 +29,5 @@ func LoadFiles(config interface{}, fnames ...string) error {
 		}
 	}
 
-	if err := validator.Validate(config); err != nil {
-		return err
-	}
-	return nil
+	return validator.Validate(config)
 }

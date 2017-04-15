@@ -18,20 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package pool
 
-// Pool contains generic pool configuration.
-type Pool struct {
+// ObjectPoolConfig contains configuration for object pools.
+type ObjectPoolConfig struct {
 	// The size of the pool.
 	Size int `yaml:"size"`
 
 	// The watermark setting.
-	WaterMark PoolWaterMark `yaml:"waterMark"`
+	WaterMark WaterMarkConfig `yaml:"waterMark"`
 }
 
-// CapacityPool contains configuratin for pools containing objects
+// CapacityPoolConfig contains configuration for pools containing objects
 // with capacity attributes (e.g., slices).
-type CapacityPool struct {
+type CapacityPoolConfig struct {
 	// The size of the pool.
 	Size int `yaml:"size"`
 
@@ -39,20 +39,20 @@ type CapacityPool struct {
 	Capacity int `yaml:"capacity"`
 
 	// The watermark setting.
-	WaterMark PoolWaterMark `yaml:"waterMark"`
+	WaterMark WaterMarkConfig `yaml:"waterMark"`
 }
 
-// BucketPool contains configuration for bucketized pools.
-type BucketPool struct {
+// BucketizedPoolConfig contains configuration for bucketized pools.
+type BucketizedPoolConfig struct {
 	// The pool bucket configuration.
-	Buckets []PoolBucket `yaml:"buckets"`
+	Buckets []BucketConfig `yaml:"buckets"`
 
 	// The watermark setting.
-	WaterMark PoolWaterMark `yaml:"waterMark"`
+	WaterMark WaterMarkConfig `yaml:"waterMark"`
 }
 
-// PoolBucket contains configuration for a pool bucket.
-type PoolBucket struct {
+// BucketConfig contains configuration for a pool bucket.
+type BucketConfig struct {
 	// The count of the items in the bucket.
 	Count int `yaml:"count"`
 
@@ -60,8 +60,8 @@ type PoolBucket struct {
 	Capacity int `yaml:"capacity"`
 }
 
-// PoolWaterMark contains watermark configuration for pools.
-type PoolWaterMark struct {
+// WaterMarkConfig contains watermark configuration for pools.
+type WaterMarkConfig struct {
 	// The low watermark to start refilling the pool, if zero none.
 	RefillLowWaterMark float64 `yaml:"lowWatermark" validate:"min=0.0,max=1.0"`
 

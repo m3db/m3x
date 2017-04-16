@@ -28,11 +28,6 @@ import (
 	"github.com/uber-go/tally"
 )
 
-const (
-	defaultSamplingRate   = 1.0
-	defaultReportInterval = time.Second
-)
-
 type options struct {
 	logger         xlog.Logger
 	scope          tally.Scope
@@ -47,7 +42,7 @@ func NewOptions() Options {
 		logger:         logger,
 		scope:          tally.NoopScope,
 		samplingRate:   defaultSamplingRate,
-		reportInterval: defaultReportInterval,
+		reportInterval: defaultReportingInterval,
 	}
 }
 

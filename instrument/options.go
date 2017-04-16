@@ -28,6 +28,11 @@ import (
 	"github.com/uber-go/tally"
 )
 
+const (
+	defaultSamplingRate      = 1.0
+	defaultReportingInterval = time.Second
+)
+
 type options struct {
 	logger         xlog.Logger
 	scope          tally.Scope

@@ -29,27 +29,32 @@ import (
 	"github.com/uber-go/tally/m3"
 )
 
-const (
-	defaultSamplingRate      = 1.0
-	defaultReportingInterval = time.Second
-)
-
 var (
 	errNoReporterConfigured = errors.New("no reporter configured")
 )
 
 // ScopeConfiguration configures a metric scope.
 type ScopeConfiguration struct {
-	Prefix            string            `yaml:"prefix"`
-	ReportingInterval time.Duration     `yaml:"reportingInterval"`
-	CommonTags        map[string]string `yaml:"tags"`
+	// Prefix of metrics in this scope.
+	Prefix string `yaml:"prefix"`
+
+	// Metrics reporting interval.
+	ReportingInterval time.Duration `yaml:"reportingInterval"`
+
+	// Common tags shared by metrics reported.
+	CommonTags map[string]string `yaml:"tags"`
 }
 
 // MetricsConfiguration configures options for emitting metrics.
 type MetricsConfiguration struct {
-	RootScope    *ScopeConfiguration `yaml:"scope"`
-	M3Reporter   *m3.Configuration   `yaml:"m3"`
-	SamplingRate float64             `yaml:"samplingRate" validate:"nonzero,min=0.0,max=1.0"`
+	// Root scope configuration.
+	RootScope *ScopeConfiguration `yaml:"scope"`
+
+	// M3 reporter configuration.
+	M3Reporter *m3.Configuration `yaml:"m3"`
+
+	// Metrics sampling rate.
+	SamplingRate float64 `yaml:"samplingRate" validate:"nonzero,min=0.0,max=1.0"`
 }
 
 // NewRootScope creates a new tally.Scope based on a tally.CachedStatsReporter

@@ -60,6 +60,7 @@ func testOptions() Options {
 		SetInitialBackoff(time.Second).
 		SetBackoffFactor(2).
 		SetMaxRetries(2).
+		SetForever(false).
 		SetJitter(false)
 }
 
@@ -171,4 +172,17 @@ func TestRetrierExponentialBackOffNonRetryableErrorSecondAttempt(t *testing.T) {
 	err := r.Attempt(newTestFn(testFnOpts{errs: []error{errTestFn, expectedErr}}))
 	assert.Equal(t, expectedErr, err)
 	assert.Equal(t, time.Second, slept)
+}
+
+func TestRetryForever(t *testing.T) {
+	numAttempts := 0
+	errForever := errors.New("error forever")
+	r := NewRetrier(testOptions().SetForever(true)).(*retrier)
+	r.sleepFn = func(t time.Duration) { numAttempts++ }
+	foreverFn := func() error { return errForever }
+	continueFn := func(attempt int) bool { return attempt < 10 }
+
+	err := r.AttemptWhile(continueFn, foreverFn)
+	assert.Equal(t, ErrWhileConditionFalse, err)
+	assert.Equal(t, 10, numAttempts)
 }

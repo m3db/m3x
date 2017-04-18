@@ -175,14 +175,21 @@ func TestRetrierExponentialBackOffNonRetryableErrorSecondAttempt(t *testing.T) {
 }
 
 func TestRetryForever(t *testing.T) {
-	numAttempts := 0
-	errForever := errors.New("error forever")
+	var (
+		errForever  = errors.New("error forever")
+		numAttempts int
+		totalSlept  time.Duration
+	)
 	r := NewRetrier(testOptions().SetForever(true)).(*retrier)
-	r.sleepFn = func(t time.Duration) { numAttempts++ }
+	r.sleepFn = func(t time.Duration) {
+		totalSlept += t
+		numAttempts++
+	}
 	foreverFn := func() error { return errForever }
 	continueFn := func(attempt int) bool { return attempt < 10 }
 
 	err := r.AttemptWhile(continueFn, foreverFn)
 	assert.Equal(t, ErrWhileConditionFalse, err)
 	assert.Equal(t, 10, numAttempts)
+	assert.Equal(t, time.Duration(1023*time.Second), totalSlept)
 }

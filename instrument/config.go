@@ -55,6 +55,9 @@ type MetricsConfiguration struct {
 
 	// Metrics sampling rate.
 	SamplingRate float64 `yaml:"samplingRate" validate:"nonzero,min=0.0,max=1.0"`
+
+	// Whether to disable reporting runtime metrics.
+	DisableRuntimeMetrics bool `yaml:"disableRuntimeMetrics"`
 }
 
 // NewRootScope creates a new tally.Scope based on a tally.CachedStatsReporter
@@ -96,7 +99,15 @@ func (mc *MetricsConfiguration) NewRootScopeReporter(
 		Prefix:         prefix,
 		CachedReporter: r,
 	}
-	return tally.NewRootScope(scopeOpts, mc.ReportInterval())
+	reportInterval := mc.ReportInterval()
+	scope, closer := tally.NewRootScope(scopeOpts, reportInterval)
+
+	if !mc.DisableRuntimeMetrics {
+		runtimeScope := scope.SubScope("runtime")
+		StartReportingRuntimeMetrics(runtimeScope, reportInterval)
+	}
+
+	return scope, closer
 }
 
 // SampleRate returns the metrics sampling rate.

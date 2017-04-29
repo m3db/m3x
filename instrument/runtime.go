@@ -21,21 +21,26 @@
 package instrument
 
 import (
+	"os"
 	"runtime"
 	"sync/atomic"
 	"time"
 
+	"github.com/shirou/gopsutil/process"
 	"github.com/uber-go/tally"
 )
 
-// StartReportingRuntimeMetrics starts reporting runtime metrics.
-func StartReportingRuntimeMetrics(
+// StartReportingExtendedMetrics starts reporting extended metrics.
+func StartReportingExtendedMetrics(
 	scope tally.Scope,
 	reportInterval time.Duration,
-) *RuntimeMetricsReporter {
-	runtimeMetricsReporter := NewRuntimeMetricsReporter(scope, reportInterval)
-	runtimeMetricsReporter.Start()
-	return runtimeMetricsReporter
+) (*ExtendedMetricsReporter, error) {
+	reporter, err := NewExtendedMetricsReporter(scope, reportInterval)
+	if err != nil {
+		return nil, err
+	}
+	reporter.Start()
+	return reporter, nil
 }
 
 type runtimeMetrics struct {
@@ -51,30 +56,44 @@ type runtimeMetrics struct {
 	lastNumGC       uint32
 }
 
-// RuntimeMetricsReporter A struct containing the state of the RuntimeMetricsReporter.
-type RuntimeMetricsReporter struct {
-	scope          tally.Scope
+type processMetrics struct {
+	NumFds      tally.Gauge
+	NumFdErrors tally.Counter
+	process     *process.Process
+}
+
+// ExtendedMetricsReporter reports an extended set of metrics.
+type ExtendedMetricsReporter struct {
 	reportInterval time.Duration
-	metrics        runtimeMetrics
+	runtime        runtimeMetrics
+	process        processMetrics
 	started        bool
 	quit           chan struct{}
 }
 
-// NewRuntimeMetricsReporter Creates a new RuntimeMetricsReporter.
-func NewRuntimeMetricsReporter(
+// NewExtendedMetricsReporter creates a new extended metrics reporter.
+func NewExtendedMetricsReporter(
 	scope tally.Scope,
 	reportInterval time.Duration,
-) *RuntimeMetricsReporter {
+) (*ExtendedMetricsReporter, error) {
+	pid := os.Getpid()
+	process, err := process.NewProcess(int32(pid))
+	if err != nil {
+		return nil, err
+	}
+
 	var memstats runtime.MemStats
 	runtime.ReadMemStats(&memstats)
 
-	memoryScope := scope.SubScope("memory")
-	return &RuntimeMetricsReporter{
-		scope:          scope,
+	runtimeScope := scope.SubScope("runtime")
+	memoryScope := runtimeScope.SubScope("memory")
+	processScope := scope.SubScope("process")
+
+	return &ExtendedMetricsReporter{
 		reportInterval: reportInterval,
-		metrics: runtimeMetrics{
-			NumGoRoutines:   scope.Gauge("num-goroutines"),
-			GoMaxProcs:      scope.Gauge("gomaxprocs"),
+		runtime: runtimeMetrics{
+			NumGoRoutines:   runtimeScope.Gauge("num-goroutines"),
+			GoMaxProcs:      runtimeScope.Gauge("gomaxprocs"),
 			MemoryAllocated: memoryScope.Gauge("allocated"),
 			MemoryHeap:      memoryScope.Gauge("heap"),
 			MemoryHeapIdle:  memoryScope.Gauge("heapidle"),
@@ -84,13 +103,18 @@ func NewRuntimeMetricsReporter(
 			GcPauseMs:       memoryScope.Timer("gc-pause-ms"),
 			lastNumGC:       memstats.NumGC,
 		},
+		process: processMetrics{
+			NumFds:      processScope.Gauge("num-fds"),
+			NumFdErrors: processScope.Counter("num-fd-errors"),
+			process:     process,
+		},
 		started: false,
 		quit:    make(chan struct{}),
-	}
+	}, nil
 }
 
-// Start Starts the reporter thread that periodically emits metrics.
-func (r *RuntimeMetricsReporter) Start() {
+// Start starts the reporter thread that periodically emits metrics.
+func (r *ExtendedMetricsReporter) Start() {
 	if r.started {
 		return
 	}
@@ -109,37 +133,50 @@ func (r *RuntimeMetricsReporter) Start() {
 	r.started = true
 }
 
-// Stop Stops reporting of runtime metrics.
+// Stop stops reporting of runtime metrics.
 // The reporter cannot be started again after it's been stopped.
-func (r *RuntimeMetricsReporter) Stop() {
+func (r *ExtendedMetricsReporter) Stop() {
 	close(r.quit)
 }
 
-// report Sends runtime metrics to the local metrics collector.
-func (r *RuntimeMetricsReporter) report() {
+func (r *ExtendedMetricsReporter) report() {
+	r.reportRuntimeMetrics()
+	r.reportProcessMetrics()
+}
+
+func (r *ExtendedMetricsReporter) reportRuntimeMetrics() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 
-	r.metrics.NumGoRoutines.Update(float64(runtime.NumGoroutine()))
-	r.metrics.GoMaxProcs.Update(float64(runtime.GOMAXPROCS(0)))
-	r.metrics.MemoryAllocated.Update(float64(memStats.Alloc))
-	r.metrics.MemoryHeap.Update(float64(memStats.HeapAlloc))
-	r.metrics.MemoryHeapIdle.Update(float64(memStats.HeapIdle))
-	r.metrics.MemoryHeapInuse.Update(float64(memStats.HeapInuse))
-	r.metrics.MemoryStack.Update(float64(memStats.StackInuse))
+	r.runtime.NumGoRoutines.Update(float64(runtime.NumGoroutine()))
+	r.runtime.GoMaxProcs.Update(float64(runtime.GOMAXPROCS(0)))
+	r.runtime.MemoryAllocated.Update(float64(memStats.Alloc))
+	r.runtime.MemoryHeap.Update(float64(memStats.HeapAlloc))
+	r.runtime.MemoryHeapIdle.Update(float64(memStats.HeapIdle))
+	r.runtime.MemoryHeapInuse.Update(float64(memStats.HeapInuse))
+	r.runtime.MemoryStack.Update(float64(memStats.StackInuse))
 
 	// memStats.NumGC is a perpetually incrementing counter (unless it wraps at 2^32).
 	num := memStats.NumGC
-	lastNum := atomic.SwapUint32(&r.metrics.lastNumGC, num)
+	lastNum := atomic.SwapUint32(&r.runtime.lastNumGC, num)
 	if delta := num - lastNum; delta > 0 {
-		r.metrics.NumGC.Inc(int64(delta))
+		r.runtime.NumGC.Inc(int64(delta))
 		if delta > 255 {
 			// too many GCs happened, the timestamps buffer got wrapped around. Report only the last 256.
 			lastNum = num - 256
 		}
 		for i := lastNum; i != num; i++ {
 			pause := memStats.PauseNs[i%256]
-			r.metrics.GcPauseMs.Record(time.Duration(pause))
+			r.runtime.GcPauseMs.Record(time.Duration(pause))
 		}
 	}
+}
+
+func (r *ExtendedMetricsReporter) reportProcessMetrics() {
+	numFds, err := r.process.process.NumFDs()
+	if err != nil {
+		r.process.NumFdErrors.Inc(1)
+		return
+	}
+	r.process.NumFds.Update(float64(numFds))
 }

@@ -63,6 +63,7 @@ type processMetrics struct {
 }
 
 // ExtendedMetricsReporter reports an extended set of metrics.
+// The reporter is not thread-safe.
 type ExtendedMetricsReporter struct {
 	reportInterval time.Duration
 	runtime        runtimeMetrics

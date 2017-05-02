@@ -35,3 +35,19 @@ type Options interface {
 	// NowFn returns the nowFn
 	NowFn() NowFn
 }
+
+// ConditionFn specifies a predicate to check
+type ConditionFn func() bool
+
+// WaitUntil returns true if the condition specified evaluated to
+// true before the timeout, false otherwise
+func WaitUntil(fn ConditionFn, timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if fn() {
+			return true
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return false
+}

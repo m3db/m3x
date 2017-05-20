@@ -118,6 +118,7 @@ func (s *server) ListenAndServe() error {
 func (s *server) serve() error {
 	connCh, errCh := xnet.StartAcceptLoop(s.listener, s.opts.Retrier())
 	for conn := range connCh {
+		conn := conn
 		if !s.addConnectionFn(conn) {
 			conn.Close()
 		} else {

@@ -23,6 +23,7 @@ package xserver
 import (
 	"fmt"
 	"net"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -65,46 +66,43 @@ func testServer(addr string) (*server, *mockHandler, *int32, *int32) {
 func TestServerListenAndClose(t *testing.T) {
 	s, h, numAdded, numRemoved := testServer(testListenAddress)
 
-	numClients := 9
+	var (
+		numClients  = 9
+		expectedRes []string
+	)
 
 	err := s.ListenAndServe()
 	require.NoError(t, err)
 	listenAddr := s.listener.Addr().String()
 
-	var expectedRes []interface{}
-
-	for i := 1; i <= numClients; i++ {
+	for i := 0; i < numClients; i++ {
 		conn, err := net.Dial("tcp", listenAddr)
 		require.NoError(t, err)
 
-		send := []byte(fmt.Sprintf("%d", i))
-		expectedRes = append(expectedRes, send)
-		_, err = conn.Write(send)
+		msg := fmt.Sprintf("msg%d", i)
+		expectedRes = append(expectedRes, msg)
+
+		_, err = conn.Write([]byte(msg))
 		require.NoError(t, err)
 	}
 
-	for {
-		handleCalled, res := h.res()
-		if handleCalled != numClients {
-			time.Sleep(50 * time.Microsecond)
-			continue
-		}
-
-		require.Equal(t, expectedRes, res)
-		break
+	for h.called() < numClients {
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	s.Close()
 
 	require.Equal(t, int32(numClients), atomic.LoadInt32(numAdded))
 	require.Equal(t, int32(numClients), atomic.LoadInt32(numRemoved))
+	require.Equal(t, numClients, h.called())
+	require.Equal(t, expectedRes, h.res())
 }
 
 type mockHandler struct {
 	sync.Mutex
 
-	called             int
-	received           []interface{}
+	n                  int
+	received           []string
 	handleConnectionFn func(conn net.Conn)
 }
 
@@ -115,14 +113,22 @@ func (h *mockHandler) Handle(conn net.Conn) {
 	b := make([]byte, 16)
 
 	n, _ := conn.Read(b)
-	h.called++
-	h.received = append(h.received, b[:n])
+	h.n++
+	h.received = append(h.received, string(b[:n]))
 	h.Unlock()
 }
 
-func (h *mockHandler) res() (int, []interface{}) {
+func (h *mockHandler) called() int {
 	h.Lock()
 	defer h.Unlock()
 
-	return h.called, h.received
+	return h.n
+}
+
+func (h *mockHandler) res() []string {
+	h.Lock()
+	defer h.Unlock()
+
+	sort.Strings(h.received)
+	return h.received
 }

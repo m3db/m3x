@@ -92,7 +92,7 @@ func NewServer(address string, handler Handler, opts Options) Server {
 		address:    address,
 		opts:       opts,
 		log:        instrumentOpts.Logger(),
-		closedChan: make(chan struct{}, 1),
+		closedChan: make(chan struct{}),
 		metrics:    newServerMetrics(scope),
 		handler:    handler,
 	}
@@ -192,14 +192,14 @@ func (s *server) removeConnection(conn net.Conn) {
 }
 
 func (s *server) reportMetrics() {
-	interval := s.opts.InstrumentOptions().ReportInterval()
-	t := time.Tick(interval)
+	t := time.NewTicker(s.opts.InstrumentOptions().ReportInterval())
 
 	for {
 		select {
-		case <-t:
+		case <-t.C:
 			s.metrics.openConnections.Update(float64(atomic.LoadInt32(&s.numConns)))
 		case <-s.closedChan:
+			t.Stop()
 			return
 		}
 	}

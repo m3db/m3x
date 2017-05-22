@@ -72,12 +72,13 @@ type server struct {
 	opts     Options
 	log      xlog.Logger
 
-	closed   int32
-	numConns int32
-	conns    []net.Conn
-	wgConns  sync.WaitGroup
-	metrics  serverMetrics
-	handler  Handler
+	closed     bool
+	closedChan chan struct{}
+	numConns   int32
+	conns      []net.Conn
+	wgConns    sync.WaitGroup
+	metrics    serverMetrics
+	handler    Handler
 
 	addConnectionFn    addConnectionFn
 	removeConnectionFn removeConnectionFn
@@ -86,13 +87,14 @@ type server struct {
 // NewServer creates a new server.
 func NewServer(address string, handler Handler, opts Options) Server {
 	instrumentOpts := opts.InstrumentOptions()
-	scope := instrumentOpts.MetricsScope().SubScope("server")
+	scope := instrumentOpts.MetricsScope()
 	s := &server{
-		address: address,
-		opts:    opts,
-		log:     instrumentOpts.Logger(),
-		metrics: newServerMetrics(scope),
-		handler: handler,
+		address:    address,
+		opts:       opts,
+		log:        instrumentOpts.Logger(),
+		closedChan: make(chan struct{}, 1),
+		metrics:    newServerMetrics(scope),
+		handler:    handler,
 	}
 
 	// Set up the connection functions.
@@ -137,11 +139,12 @@ func (s *server) serve() error {
 
 func (s *server) Close() {
 	s.Lock()
-	if atomic.LoadInt32(&s.closed) == 1 {
+	if s.closed {
 		s.Unlock()
 		return
 	}
-	atomic.StoreInt32(&s.closed, 1)
+	s.closed = true
+	close(s.closedChan)
 	openConns := make([]net.Conn, len(s.conns))
 	copy(openConns, s.conns)
 	s.Unlock()
@@ -164,7 +167,7 @@ func (s *server) addConnection(conn net.Conn) bool {
 	s.Lock()
 	defer s.Unlock()
 
-	if atomic.LoadInt32(&s.closed) == 1 {
+	if s.closed {
 		return false
 	}
 	s.conns = append(s.conns, conn)
@@ -193,10 +196,11 @@ func (s *server) reportMetrics() {
 	t := time.Tick(interval)
 
 	for {
-		<-t
-		if atomic.LoadInt32(&s.closed) == 1 {
+		select {
+		case <-t:
+			s.metrics.openConnections.Update(float64(atomic.LoadInt32(&s.numConns)))
+		case <-s.closedChan:
 			return
 		}
-		s.metrics.openConnections.Update(float64(atomic.LoadInt32(&s.numConns)))
 	}
 }

@@ -50,7 +50,7 @@ type Handler interface {
 	// should be blocking until the connection is closed or received error.
 	Handle(conn net.Conn)
 
-	// Close closes the handler
+	// Close closes the handler.
 	Close()
 }
 

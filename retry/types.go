@@ -46,6 +46,10 @@ type ContinueFn func(attempt int) bool
 
 // Retrier is a executor that can retry attempts on executing methods
 type Retrier interface {
+	// SetForeverRetry sets the retry mode that determines whether attempts should
+	// be retried forever.
+	SetForeverRetry(forever bool) Retrier
+
 	// Attempt will attempt to perform a function with retries
 	Attempt(fn Fn) error
 

@@ -90,6 +90,12 @@ func NewRetrier(opts Options) Retrier {
 	}
 }
 
+func (r *retrier) SetForeverRetry(forever bool) Retrier {
+	retrier := *r
+	retrier.forever = forever
+	return &retrier
+}
+
 func (r *retrier) Attempt(fn Fn) error {
 	return r.attempt(nil, fn)
 }

@@ -101,7 +101,7 @@ func TestServerListenAndClose(t *testing.T) {
 	require.Equal(t, expectedRes, h.res())
 }
 
-func TestServerServe(t *testing.T) {
+func TestServe(t *testing.T) {
 	s, _, _, _ := testServer(testListenAddress)
 
 	l, err := net.Listen("tcp", testListenAddress)

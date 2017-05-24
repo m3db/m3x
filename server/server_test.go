@@ -109,6 +109,8 @@ func TestServe(t *testing.T) {
 
 	err = s.Serve(l)
 	require.NoError(t, err)
+	require.Equal(t, l, s.listener)
+	require.Equal(t, l.Addr().String(), s.address)
 
 	s.Close()
 }

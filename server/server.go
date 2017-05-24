@@ -124,7 +124,7 @@ func (s *server) ListenAndServe() error {
 }
 
 func (s *server) Serve(l net.Listener) error {
-	s.address := l.Addr().String()
+	s.address = l.Addr().String()
 	s.listener = l
 	go s.serve()
 	return nil

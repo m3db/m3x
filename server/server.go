@@ -131,7 +131,7 @@ func (s *server) Serve(l net.Listener) error {
 }
 
 func (s *server) serve() error {
-	connCh, errCh := xnet.StartAcceptLoop(s.listener, s.opts.Retrier())
+	connCh, errCh := xnet.StartForeverAcceptLoop(s.listener, s.opts.Retrier())
 	for conn := range connCh {
 		conn := conn
 		if !s.addConnectionFn(conn) {

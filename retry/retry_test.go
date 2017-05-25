@@ -180,7 +180,7 @@ func TestRetryForever(t *testing.T) {
 		numAttempts int
 		totalSlept  time.Duration
 	)
-	r := NewRetrier(testOptions().SetForever(true)).(*retrier)
+	r := NewRetrier(testOptions().SetForever(true).SetMaxRetries(3)).(*retrier)
 	r.sleepFn = func(t time.Duration) {
 		totalSlept += t
 		numAttempts++
@@ -192,4 +192,10 @@ func TestRetryForever(t *testing.T) {
 	assert.Equal(t, ErrWhileConditionFalse, err)
 	assert.Equal(t, 10, numAttempts)
 	assert.Equal(t, time.Duration(1023*time.Second), totalSlept)
+
+	numAttempts = 0
+	r = r.SetForeverRetry(false).(*retrier)
+	err = r.Attempt(foreverFn)
+	assert.Equal(t, errForever, err)
+	assert.Equal(t, 3, numAttempts)
 }

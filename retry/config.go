@@ -48,8 +48,8 @@ type Configuration struct {
 	Jitter bool `yaml:"jitter"`
 }
 
-// NewRetrier creates a new retrier based on the configuration.
-func (c Configuration) NewRetrier(scope tally.Scope) Retrier {
+// NewOptions creates a new retry options based on the configuration.
+func (c Configuration) NewOptions(scope tally.Scope) Options {
 	var (
 		initialBackoff = defaultInitialBackoff
 		backoffFactor  = defaultBackoffFactor
@@ -68,7 +68,7 @@ func (c Configuration) NewRetrier(scope tally.Scope) Retrier {
 	if c.MaxRetries != 0 {
 		maxRetries = c.MaxRetries
 	}
-	retryOpts := NewOptions().
+	return NewOptions().
 		SetMetricsScope(scope).
 		SetInitialBackoff(initialBackoff).
 		SetBackoffFactor(backoffFactor).
@@ -76,5 +76,9 @@ func (c Configuration) NewRetrier(scope tally.Scope) Retrier {
 		SetMaxRetries(maxRetries).
 		SetForever(c.Forever).
 		SetJitter(c.Jitter)
-	return NewRetrier(retryOpts)
+}
+
+// NewRetrier creates a new retrier based on the configuration.
+func (c Configuration) NewRetrier(scope tally.Scope) Retrier {
+	return NewRetrier(c.NewOptions(scope))
 }

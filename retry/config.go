@@ -42,40 +42,35 @@ type Configuration struct {
 
 	// Whether to retry forever until either the attempt succeeds,
 	// or the retry condition becomes false.
-	Forever bool `yaml:"forever"`
+	Forever *bool `yaml:"forever"`
 
 	// Whether jittering is applied during retries.
-	Jitter bool `yaml:"jitter"`
+	Jitter *bool `yaml:"jitter"`
 }
 
 // NewOptions creates a new retry options based on the configuration.
 func (c Configuration) NewOptions(scope tally.Scope) Options {
-	var (
-		initialBackoff = defaultInitialBackoff
-		backoffFactor  = defaultBackoffFactor
-		maxBackoff     = defaultMaxBackoff
-		maxRetries     = defaultMaxRetries
-	)
+	opts := NewOptions()
 	if c.InitialBackoff != 0 {
-		initialBackoff = c.InitialBackoff
+		opts = opts.SetInitialBackoff(c.InitialBackoff)
 	}
 	if c.BackoffFactor != 0.0 {
-		backoffFactor = c.BackoffFactor
+		opts = opts.SetBackoffFactor(c.BackoffFactor)
 	}
 	if c.MaxBackoff != 0 {
-		maxBackoff = c.MaxBackoff
+		opts = opts.SetMaxBackoff(c.MaxBackoff)
 	}
 	if c.MaxRetries != 0 {
-		maxRetries = c.MaxRetries
+		opts = opts.SetMaxRetries(c.MaxRetries)
 	}
-	return NewOptions().
-		SetMetricsScope(scope).
-		SetInitialBackoff(initialBackoff).
-		SetBackoffFactor(backoffFactor).
-		SetMaxBackoff(maxBackoff).
-		SetMaxRetries(maxRetries).
-		SetForever(c.Forever).
-		SetJitter(c.Jitter)
+	if c.Forever != nil {
+		opts = opts.SetForever(*c.Forever)
+	}
+	if c.Jitter != nil {
+		opts = opts.SetJitter(*c.Jitter)
+	}
+
+	return opts
 }
 
 // NewRetrier creates a new retrier based on the configuration.

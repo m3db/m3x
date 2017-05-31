@@ -60,7 +60,7 @@ func toBytes(s string) ImmutableBytes {
 	}
 
 	// NB(xichen): we need to declare a real byte slice so internally the compiler
-	// knows to use an unsafe.Pointer to keep track of the underlying memory so tha
+	// knows to use an unsafe.Pointer to keep track of the underlying memory so that
 	// once the slice's array pointer is updated with the pointer to the string's
 	// underlying bytes, the compiler won't prematurely GC the memory when the string
 	// goes out of scope.
@@ -74,7 +74,7 @@ func toBytes(s string) ImmutableBytes {
 
 	// NB(xichen): it is important that we access s after we assign the Data
 	// pointer of the string header to the Data pointer of the slice header to
-	// make sure the string (and the underlying bytes backing the string) don't get
+	// make sure the string (and the underlying bytes backing the string) doesn't get
 	// GC'ed before the assignment happens.
 	l := len(s)
 	byteHeader.Len = l

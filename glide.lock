@@ -1,10 +1,12 @@
 hash: 4214e6905b6a7d851f01b86dd6ea69691a46c34539e77723224acf026fa9b492
-updated: 2017-04-29T16:49:27.216859815-04:00
+updated: 2017-06-06T09:18:09.532089879-04:00
 imports:
 - name: github.com/apache/thrift
   version: 9549b25c77587b29be4e0b5c258221a4ed85d37a
   subpackages:
   - lib/go/thrift
+- name: github.com/dgryski/go-farm
+  version: e2d0fe22b456fa0a35cd883ba355ecfcf1881490
 - name: github.com/facebookgo/clock
   version: 600d898af40aa09a7a93ecb9265d87b0504b6f03
 - name: github.com/go-ole/go-ole

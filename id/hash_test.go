@@ -31,3 +31,17 @@ func TestHashFn(t *testing.T) {
 	input := []byte{0x1, 0x2, 0x3}
 	require.Equal(t, HashFn(input), Hash(md5.Sum(input)))
 }
+
+func BenchmarkHashFn(b *testing.B) {
+	input := []byte("supercalifragilisticexpialidocious")
+	for i := 0; i < b.N; i++ {
+		HashFn(input)
+	}
+}
+
+func BenchmarkFarmHashFn(b *testing.B) {
+	input := []byte("supercalifragilisticexpialidocious")
+	for i := 0; i < b.N; i++ {
+		FarmHashFn(input)
+	}
+}

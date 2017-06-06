@@ -20,7 +20,12 @@
 
 package xid
 
-import "crypto/md5"
+import (
+	"crypto/md5"
+	"encoding/binary"
+
+	"github.com/dgryski/go-farm"
+)
 
 // Hash represents a form of ID suitable to be used as map keys.
 type Hash [md5.Size]byte
@@ -28,4 +33,13 @@ type Hash [md5.Size]byte
 // HashFn is the default hashing implementation for IDs.
 func HashFn(data []byte) Hash {
 	return md5.Sum(data)
+}
+
+// FarmHashFn is an alternative hashing implementation for IDs.
+func FarmHashFn(data []byte) Hash {
+	var h [md5.Size]byte
+	hi, lo := farm.Hash128(data)
+	binary.LittleEndian.PutUint64(h[0:8], lo)
+	binary.LittleEndian.PutUint64(h[8:16], hi)
+	return h
 }

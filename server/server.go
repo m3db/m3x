@@ -76,9 +76,9 @@ type server struct {
 
 	address                string
 	listener               net.Listener
-	opts                   Options
 	log                    xlog.Logger
 	retryOpts              xretry.Options
+	reportInterval         time.Duration
 	tcpConnectionKeepAlive bool
 
 	closed     bool
@@ -100,9 +100,9 @@ func NewServer(address string, handler Handler, opts Options) Server {
 
 	s := &server{
 		address:                address,
-		opts:                   opts,
 		log:                    instrumentOpts.Logger(),
 		retryOpts:              opts.RetryOptions(),
+		reportInterval:         instrumentOpts.ReportInterval(),
 		tcpConnectionKeepAlive: opts.TCPConnectionKeepAlive(),
 		closedChan:             make(chan struct{}),
 		metrics:                newServerMetrics(scope),
@@ -217,7 +217,7 @@ func (s *server) removeConnection(conn net.Conn) {
 }
 
 func (s *server) reportMetrics() {
-	t := time.NewTicker(s.opts.InstrumentOptions().ReportInterval())
+	t := time.NewTicker(s.reportInterval)
 
 	for {
 		select {

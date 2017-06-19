@@ -1,13 +1,12 @@
 // Package election provides a wrapper around a subset of the Election
 // functionality of etcd's concurrency package with error handling for common
-// failure scenarios.
+// failure scenarios such as lease expiration.
 package election
 
 import (
 	"errors"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
@@ -15,17 +14,22 @@ import (
 )
 
 var (
+	// ErrCampaignInProgress is returned when a client tries to start a second
+	// camapaign if they are either (1) already the leader or (2) not the leader
+	// but already campaigning.
 	ErrCampaignInProgress = errors.New("election: campaign already in progress")
-	ErrSessionExpired     = errors.New("election: session expired")
-	ErrClientClosed       = errors.New("election: client has been closed")
+
+	// ErrSessionExpired is returned by Campaign() if the underlying session
+	// (lease) has expired.
+	ErrSessionExpired = errors.New("election: session expired")
+
+	// ErrClientClosed is returned when an election client has been closed and
+	// cannot be reused.
+	ErrClientClosed = errors.New("election: client has been closed")
 )
 
-const (
-	DefaultLeaderTimeout = 30 * time.Second
-	DefaultResignTimeout = 30 * time.Second
-)
-
-type client struct {
+// Client encapsulates a client of etcd-backed leader elections.
+type Client struct {
 	mu sync.RWMutex
 
 	prefix string
@@ -40,17 +44,16 @@ type client struct {
 	ctxCancel   context.CancelFunc
 }
 
-func NewClient(cli *clientv3.Client, prefix string, options ...ClientOption) (*client, error) {
-	opts := clientOpts{
-		leaderTimeout: DefaultLeaderTimeout,
-		resignTimeout: DefaultResignTimeout,
-	}
-
+// NewClient returns an election client based on the given etcd client and
+// participating in elections rooted at the given prefix. Optional parameters
+// can be configured via options, such as configuration of the etcd session TTL.
+func NewClient(cli *clientv3.Client, prefix string, options ...ClientOption) (*Client, error) {
+	var opts clientOpts
 	for _, opt := range options {
 		opt(&opts)
 	}
 
-	cl := &client{
+	cl := &Client{
 		prefix:     prefix,
 		opts:       opts,
 		etcdClient: cli,
@@ -63,7 +66,22 @@ func NewClient(cli *clientv3.Client, prefix string, options ...ClientOption) (*c
 	return cl, nil
 }
 
-func (c *client) Campaign(ctx context.Context, val string) (<-chan struct{}, error) {
+// Campaign starts a new campaign for val at the prefix configured at client
+// creation. It blocks until the etcd Campaign call returns, and returns any
+// error encountered or ErrSessionExpired if election.Campaign returned a nil
+// error but was due to the underlying session expiring. If the client is
+// successfully elected with a valid session, a channel is returned which will
+// be closed if that session expires in the background. Callers of Campaign()
+// should keep a reference to this channel and restart their campaigns if it is
+// closed.
+//
+// If a client is either already campaigning or already elected and has not
+// called Resign(), ErrCampaignInProgress will be returned (if the session
+// expires in the background the client will be allowed to call Campaign() again
+// without calling Resign()). If a session expires either during the call to
+// Campaign() or after the call succeeds, calling Campaign() again will create a
+// new session transparently for the user.
+func (c *Client) Campaign(ctx context.Context, val string) (<-chan struct{}, error) {
 	if c.isClosed() {
 		return nil, ErrClientClosed
 	}
@@ -129,7 +147,11 @@ func (c *client) Campaign(ctx context.Context, val string) (<-chan struct{}, err
 	return session.Done(), nil
 }
 
-func (c *client) Resign(ctx context.Context) error {
+// Resign gives up leadership if the caller was elected. Additionally, if the
+// caller was actively campaigning (i.e. a concurrent call to Campaign() was
+// still blocking) but had not yet been elected, calling Resign() will cancel
+// that ongoing campaign.
+func (c *Client) Resign(ctx context.Context) error {
 	if c.isClosed() {
 		return ErrClientClosed
 	}
@@ -143,7 +165,7 @@ func (c *client) Resign(ctx context.Context) error {
 
 	defer c.resetCampaigning()
 
-	ctx, cancel := context.WithTimeout(ctx, c.opts.resignTimeout)
+	ctx, cancel := context.WithCancel(ctx)
 	err := election.Resign(ctx)
 	cancel()
 
@@ -154,7 +176,9 @@ func (c *client) Resign(ctx context.Context) error {
 	return nil
 }
 
-func (c *client) Leader(ctx context.Context) (string, error) {
+// Leader returns the value proposed by the currently elected leader of the
+// election.
+func (c *Client) Leader(ctx context.Context) (string, error) {
 	if c.isClosed() {
 		return "", ErrClientClosed
 	}
@@ -163,7 +187,7 @@ func (c *client) Leader(ctx context.Context) (string, error) {
 	election := c.election
 	c.mu.RUnlock()
 
-	ctx, cancel := context.WithTimeout(ctx, c.opts.leaderTimeout)
+	ctx, cancel := context.WithCancel(ctx)
 	ld, err := election.Leader(ctx)
 	cancel()
 
@@ -174,7 +198,9 @@ func (c *client) Leader(ctx context.Context) (string, error) {
 	return ld, err
 }
 
-func (c *client) Close() error {
+// Close closes the client's underlying session and prevents any further
+// campaigns from being started.
+func (c *Client) Close() error {
 	if c.setClosed() {
 		c.mu.Lock()
 		c.cancelWithLock()
@@ -187,7 +213,7 @@ func (c *client) Close() error {
 	return nil
 }
 
-func (c *client) resetSession() error {
+func (c *Client) resetSession() error {
 	session, err := concurrency.NewSession(c.etcdClient, c.opts.sessionOpts...)
 	if err != nil {
 		return err
@@ -200,23 +226,23 @@ func (c *client) resetSession() error {
 	return nil
 }
 
-func (c *client) isCampaigning() bool {
+func (c *Client) isCampaigning() bool {
 	return atomic.LoadUint32(&c.campaigning) == 1
 }
 
-func (c *client) resetCampaigning() {
+func (c *Client) resetCampaigning() {
 	atomic.StoreUint32(&c.campaigning, 0)
 }
 
-func (c *client) isClosed() bool {
+func (c *Client) isClosed() bool {
 	return atomic.LoadUint32(&c.closed) == 1
 }
 
-func (c *client) setClosed() bool {
+func (c *Client) setClosed() bool {
 	return atomic.CompareAndSwapUint32(&c.closed, 0, 1)
 }
 
-func (c *client) cancelWithLock() {
+func (c *Client) cancelWithLock() {
 	if c.ctxCancel != nil {
 		c.ctxCancel()
 		c.ctxCancel = nil

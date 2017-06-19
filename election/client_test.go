@@ -34,7 +34,7 @@ func (tc *testCluster) etcdClient() *clientv3.Client {
 	return tc.cluster.RandClient()
 }
 
-func (tc *testCluster) client(prefix string, options ...ClientOption) *client {
+func (tc *testCluster) client(prefix string, options ...ClientOption) *Client {
 	options = append([]ClientOption{WithSessionOptions(concurrency.WithTTL(5))}, options...)
 	cl, err := NewClient(tc.etcdClient(), prefix, options...)
 	require.NoError(tc.t, err)

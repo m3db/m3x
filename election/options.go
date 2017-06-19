@@ -1,31 +1,19 @@
 package election
 
-import (
-	"time"
-
-	"github.com/coreos/etcd/clientv3/concurrency"
-)
+import "github.com/coreos/etcd/clientv3/concurrency"
 
 type clientOpts struct {
-	resignTimeout time.Duration
-	leaderTimeout time.Duration
-	sessionOpts   []concurrency.SessionOption
+	sessionOpts []concurrency.SessionOption
 }
 
+// ClientOption provides a means of configuring optional parameters for a
+// client.
 type ClientOption func(*clientOpts)
 
-func WithResignTimeout(to time.Duration) ClientOption {
-	return func(o *clientOpts) {
-		o.resignTimeout = to
-	}
-}
-
-func WithLeaderTimeout(to time.Duration) ClientOption {
-	return func(o *clientOpts) {
-		o.leaderTimeout = to
-	}
-}
-
+// WithSessionOptions sets the options passed to all underlying
+// concurrency.Session instances associated with elections. If the user wishes
+// to override the TTL of sessions, concurrency.WithTTL(ttl) should be passed
+// here.
 func WithSessionOptions(opts ...concurrency.SessionOption) ClientOption {
 	return func(o *clientOpts) {
 		o.sessionOpts = opts

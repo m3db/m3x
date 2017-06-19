@@ -106,6 +106,32 @@ func TestCampaign_DeadSession(t *testing.T) {
 	tc := newTestCluster(t)
 	defer tc.close()
 
+	cl1 := tc.client("")
+	cl2 := tc.client("")
+
+	_, err := cl1.Campaign(context.Background(), "1")
+	assert.NoError(t, err)
+
+	errC := make(chan error)
+	go func() {
+		_, err := cl2.Campaign(context.Background(), "2")
+		errC <- err
+	}()
+
+	cl2.session.Orphan()
+
+	select {
+	case err := <-errC:
+		assert.Equal(t, ErrSessionExpired, err)
+	case <-time.After(10 * time.Second):
+		t.Error("should receive ErrSessionExpired from client2 after orphaning session")
+	}
+}
+
+func TestCampaign_DeadSession_Background(t *testing.T) {
+	tc := newTestCluster(t)
+	defer tc.close()
+
 	cl := tc.client("")
 
 	ch, err := cl.Campaign(context.Background(), "1")

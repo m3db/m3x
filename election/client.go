@@ -99,19 +99,35 @@ func (c *Client) Campaign(ctx context.Context, val string) (<-chan struct{}, err
 		}
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-	c.mu.Lock()
-	c.ctxCancel = cancel
-	c.mu.Unlock()
-
-	err := c.election.Campaign(ctx, val)
-	if err != nil {
-		return nil, err
-	}
-
 	c.mu.RLock()
 	session := c.session
 	c.mu.RUnlock()
+
+	// if we lose the session in the background and that session was the
+	// client's active one we want to allow the client to campaign again
+	go func(session *concurrency.Session) {
+		<-session.Done()
+		c.mu.Lock()
+		c.resetCampaigning()
+		c.cancelWithLock()
+		if c.session == session {
+			c.session = nil
+			c.election = nil
+		}
+		c.mu.Unlock()
+	}(session)
+
+	ctx, cancel := context.WithCancel(ctx)
+	c.mu.Lock()
+	c.ctxCancel = cancel
+	election := c.election
+	c.mu.Unlock()
+
+	err := election.Campaign(ctx, val)
+
+	c.mu.Lock()
+	c.cancelWithLock()
+	c.mu.Unlock()
 
 	select {
 	case <-session.Done():
@@ -127,22 +143,12 @@ func (c *Client) Campaign(ctx context.Context, val string) (<-chan struct{}, err
 	default:
 	}
 
-	c.mu.Lock()
-	c.cancelWithLock()
-	c.mu.Unlock()
-
-	// if we lose the session in the background and that session was the
-	// client's active one we want to allow the client to campaign again
-	go func(session *concurrency.Session) {
-		<-session.Done()
-		c.mu.Lock()
-		c.resetCampaigning()
-		if c.session == session {
-			c.session = nil
-			c.election = nil
-		}
-		c.mu.Unlock()
-	}(session)
+	// defer checking the error from Campaign() until we've returned a
+	// SessionExpired error if that was the cause (background routine may have
+	// cancelled Campaign() context due to dead session)
+	if err != nil {
+		return nil, err
+	}
 
 	return session.Done(), nil
 }
@@ -224,10 +230,6 @@ func (c *Client) resetSession() error {
 	c.election = concurrency.NewElection(session, c.prefix)
 	c.mu.Unlock()
 	return nil
-}
-
-func (c *Client) isCampaigning() bool {
-	return atomic.LoadUint32(&c.campaigning) == 1
 }
 
 func (c *Client) resetCampaigning() {

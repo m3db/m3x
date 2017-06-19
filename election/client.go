@@ -162,14 +162,20 @@ func (c *Client) Resign(ctx context.Context) error {
 		return ErrClientClosed
 	}
 
+	defer c.resetCampaigning()
+
 	c.mu.Lock()
-	// if we're not the leader but actively campaigning, we also want to cancel
-	// the active campaign
-	c.cancelWithLock()
+	// if we're not the leader but actively campaigning, we only want to cancel
+	// the active campaign context (otherwise risk a race between
+	// election.Campaign() and election.Resign())
+	if c.ctxCancel != nil {
+		c.ctxCancel()
+		c.ctxCancel = nil
+		c.mu.Unlock()
+		return nil
+	}
 	election := c.election
 	c.mu.Unlock()
-
-	defer c.resetCampaigning()
 
 	ctx, cancel := context.WithCancel(ctx)
 	err := election.Resign(ctx)

@@ -180,6 +180,7 @@ func TestCampaign_ResignActive(t *testing.T) {
 	}()
 
 	<-ch2
+	time.Sleep(200 * time.Millisecond)
 	err = cl2.Resign(context.Background())
 	assert.NoError(t, err)
 

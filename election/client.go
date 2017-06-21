@@ -30,7 +30,8 @@ var (
 
 // Client encapsulates a client of etcd-backed leader elections.
 type Client struct {
-	mu sync.RWMutex
+	mu  sync.RWMutex
+	cMu sync.RWMutex // campaign lock
 
 	prefix string
 	opts   clientOpts
@@ -39,10 +40,7 @@ type Client struct {
 	election   *concurrency.Election
 	session    *concurrency.Session
 
-	campaigning  uint32
-	closed       uint32
-	ctxCancel    context.CancelFunc
-	campaignErrC chan error
+	closed uint32
 }
 
 // NewClient returns an election client based on the given etcd client and
@@ -71,148 +69,81 @@ func NewClient(cli *clientv3.Client, prefix string, options ...ClientOption) (*C
 // creation. It blocks until the etcd Campaign call returns, and returns any
 // error encountered or ErrSessionExpired if election.Campaign returned a nil
 // error but was due to the underlying session expiring. If the client is
-// successfully elected with a valid session, an error channel is also returned
-// to notify the caller of the lifetime of the leadership. Specifically, if the
-// elected client explicitly calls Resign() the channel is closed immediately,
-// and if it loses its session in the background then ErrSessionClosed is sent
-// along the channel before immediately being closed. All callers should consume
-// this channel in the background once elected.
+// successfully elected with a valid session, a channel is returned which is
+// closed when the session associated with the campaign expires. Callers should
+// watch this channel to determine if their presumed leadership from a nil-error
+// response is no longer valid.
 //
-// If a client is either already campaigning or already elected and has not
-// called Resign(), ErrCampaignInProgress will be returned (if the session
-// expires in the background the client will be allowed to call Campaign() again
-// without calling Resign()). If a session expires either during the call to
-// Campaign() or after the call succeeds, calling Campaign() again will create a
-// new session transparently for the user.
-func (c *Client) Campaign(ctx context.Context, val string) (<-chan error, error) {
+// If the session expires while a Campaign() call is blocking, the campaign will
+// be cancelled and return a context.Cancelled error.
+//
+// If a caller wishes to cancel a current blocking campaign, they must pass a
+// context which they are responsible for cancelling otherwise the call to
+// Campaign() will block indefinitely until the client is elected (or until the
+// associated session expires).
+func (c *Client) Campaign(ctx context.Context, val string) (<-chan struct{}, error) {
 	if c.isClosed() {
 		return nil, ErrClientClosed
 	}
 
-	if !atomic.CompareAndSwapUint32(&c.campaigning, 0, 1) {
-		return nil, ErrCampaignInProgress
-	}
-
-	c.mu.RLock()
-	reset := c.session == nil || c.election == nil
-	c.mu.RUnlock()
-	if reset {
-		if err := c.resetSession(); err != nil {
-			return nil, err
-		}
-	}
+	c.cMu.Lock()
+	defer c.cMu.Unlock()
 
 	c.mu.RLock()
 	session := c.session
+	election := c.election
 	c.mu.RUnlock()
 
-	// if we lose the session in the background and that session was the
-	// client's active one we want to allow the client to campaign again
-	go func(session *concurrency.Session) {
-		<-session.Done()
-		c.mu.Lock()
-		c.resetCampaigning()
-		c.cancelWithLock()
-		if c.session == session {
-			c.session = nil
-			c.election = nil
+	// if current session is dead we need to create a new one
+	select {
+	case <-session.Done():
+		err := c.resetSession()
+		if err != nil {
+			return nil, err
 		}
-		c.mu.Unlock()
-	}(session)
 
-	errC := make(chan error, 1)
+		// if created a new session / election need to grab new one
+		c.mu.RLock()
+		session = c.session
+		election = c.election
+		c.mu.RUnlock()
+	default:
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	c.mu.Lock()
-	c.ctxCancel = cancel
-	election := c.election
-	c.campaignErrC = errC
-	c.mu.Unlock()
+	defer cancel()
 
-	err := election.Campaign(ctx, val)
+	// if session expires in background cancel ongoing campaign call
+	go func() {
+		<-session.Done()
+		cancel()
+	}()
 
-	c.mu.Lock()
-	c.cancelWithLock()
-	c.mu.Unlock()
+	if err := election.Campaign(ctx, val); err != nil {
+		return nil, err
+	}
 
 	select {
 	case <-session.Done():
-		// may get nil error from election.Campaign() but was not elected due to
-		// session expiration
-		c.mu.Lock()
-		c.session = nil
-		c.election = nil
-		c.closeErrWithLock()
-		c.mu.Unlock()
-		c.resetCampaigning()
-
 		return nil, ErrSessionExpired
 	default:
 	}
 
-	// defer checking the error from Campaign() until we've returned a
-	// SessionExpired error if that was the cause (background routine may have
-	// cancelled Campaign() context due to dead session)
-	if err != nil {
-		c.mu.Lock()
-		c.closeErrWithLock()
-		c.mu.Unlock()
-		return nil, err
-	}
-
-	go func() {
-		select {
-		// if Resign() closes errC return
-		case <-errC:
-		case <-session.Done():
-			errC <- ErrSessionExpired
-			c.mu.Lock()
-			c.closeErrWithLock()
-			c.mu.Unlock()
-		}
-	}()
-
-	return errC, nil
+	return session.Done(), nil
 }
 
-// Resign gives up leadership if the caller was elected. Additionally, if the
-// caller was actively campaigning (i.e. a concurrent call to Campaign() was
-// still blocking) but had not yet been elected, calling Resign() will cancel
-// that ongoing campaign.
+// Resign gives up leadership if the caller was elected. If a current call to
+// Campaign() is ongoing, Resign() will block until that call completes to avoid
+// a race in the concurrency.Election type.
 func (c *Client) Resign(ctx context.Context) error {
 	if c.isClosed() {
 		return ErrClientClosed
 	}
 
-	defer c.resetCampaigning()
+	c.cMu.RLock()
+	defer c.cMu.RUnlock()
 
-	c.mu.Lock()
-	// if we're not the leader but actively campaigning, we only want to cancel
-	// the active campaign context (otherwise risk a race between
-	// election.Campaign() and election.Resign())
-	if c.ctxCancel != nil {
-		c.ctxCancel()
-		c.ctxCancel = nil
-		c.mu.Unlock()
-		return nil
-	}
-	election := c.election
-	c.mu.Unlock()
-
-	ctx, cancel := context.WithCancel(ctx)
-	err := election.Resign(ctx)
-	cancel()
-
-	// inform listener from result of Campaign of resignation
-	c.mu.Lock()
-	c.closeErrWithLock()
-	c.mu.Unlock()
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return c.election.Resign(ctx)
 }
 
 // Leader returns the value proposed by the currently elected leader of the
@@ -223,30 +154,19 @@ func (c *Client) Leader(ctx context.Context) (string, error) {
 	}
 
 	c.mu.RLock()
-	election := c.election
-	c.mu.RUnlock()
+	defer c.mu.RUnlock()
 
-	ctx, cancel := context.WithCancel(ctx)
-	ld, err := election.Leader(ctx)
-	cancel()
-
-	if err != nil {
-		return "", err
-	}
-
-	return ld, err
+	return c.election.Leader(ctx)
 }
 
 // Close closes the client's underlying session and prevents any further
 // campaigns from being started.
 func (c *Client) Close() error {
 	if c.setClosed() {
-		c.mu.Lock()
-		c.cancelWithLock()
-		session := c.session
-		c.mu.Unlock()
+		c.mu.RLock()
+		defer c.mu.RUnlock()
 
-		return session.Close()
+		return c.session.Close()
 	}
 
 	return nil
@@ -265,28 +185,10 @@ func (c *Client) resetSession() error {
 	return nil
 }
 
-func (c *Client) resetCampaigning() {
-	atomic.StoreUint32(&c.campaigning, 0)
-}
-
 func (c *Client) isClosed() bool {
 	return atomic.LoadUint32(&c.closed) == 1
 }
 
 func (c *Client) setClosed() bool {
 	return atomic.CompareAndSwapUint32(&c.closed, 0, 1)
-}
-
-func (c *Client) cancelWithLock() {
-	if c.ctxCancel != nil {
-		c.ctxCancel()
-		c.ctxCancel = nil
-	}
-}
-
-func (c *Client) closeErrWithLock() {
-	if c.campaignErrC != nil {
-		close(c.campaignErrC)
-		c.campaignErrC = nil
-	}
 }

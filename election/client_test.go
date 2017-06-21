@@ -2,7 +2,6 @@ package election
 
 import (
 	"context"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -67,9 +66,6 @@ func TestCampaign(t *testing.T) {
 	ld, err := cl.Leader(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, "foo", ld)
-
-	_, err = cl.Campaign(context.Background(), "foo")
-	assert.Equal(t, ErrCampaignInProgress, err)
 }
 
 func TestCampaign_Multi(t *testing.T) {
@@ -119,13 +115,15 @@ func TestCampaign_DeadSession(t *testing.T) {
 		errC <- err
 	}()
 
-	cl2.session.Orphan()
+	time.Sleep(time.Second)
+
+	cl2.session.Close()
 
 	select {
 	case err := <-errC:
-		assert.Equal(t, ErrSessionExpired, err)
-	case <-time.After(10 * time.Second):
-		t.Error("should receive ErrSessionExpired from client2 after orphaning session")
+		assert.Equal(t, context.Canceled, err)
+	case <-time.After(30 * time.Second):
+		t.Error("should receive err from client2 after orphaning session")
 	}
 }
 
@@ -142,18 +140,12 @@ func TestCampaign_DeadSession_Background(t *testing.T) {
 
 	sent := false
 	select {
-	case err, ok := <-ch:
-		assert.Equal(t, ErrSessionExpired, err)
-		if ok {
-			sent = true
-		}
-	case <-time.After(30 * time.Second):
+	case <-ch:
+		sent = true
+	case <-time.After(10 * time.Second):
 	}
 
 	assert.True(t, sent, "should have received session dead signal")
-
-	_, ok := <-ch
-	assert.False(t, ok, "channel should be closed")
 
 	// new campaign should reset session
 	_, err = cl.Campaign(context.Background(), "1")
@@ -169,29 +161,11 @@ func TestResign(t *testing.T) {
 	defer tc.close()
 
 	cl := tc.client("")
-	ec, err := cl.Campaign(context.Background(), "foo")
+	_, err := cl.Campaign(context.Background(), "foo")
 	assert.NoError(t, err)
-
-	var errs uint32
-
-	doneC := make(chan struct{})
-	go func() {
-		for range ec {
-			atomic.AddUint32(&errs, 1)
-		}
-		close(doneC)
-	}()
 
 	err = cl.Resign(context.Background())
 	assert.NoError(t, err)
-
-	select {
-	case <-doneC:
-	case <-time.After(5 * time.Second):
-		t.Error("error channel from campaign should be closed")
-	}
-
-	assert.Equal(t, uint32(0), atomic.LoadUint32(&errs), "should see no errors on campaign channel")
 }
 
 func TestCampaign_ResignActive(t *testing.T) {
@@ -209,15 +183,18 @@ func TestCampaign_ResignActive(t *testing.T) {
 	ch := make(chan struct{})
 	ch2 := make(chan struct{})
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	go func() {
 		close(ch2)
-		_, err := cl2.Campaign(context.Background(), "2")
+		_, err := cl2.Campaign(ctx, "2")
 		assert.Equal(t, context.Canceled, err)
 		close(ch)
 	}()
 
 	<-ch2
 	time.Sleep(200 * time.Millisecond)
+	cancel()
 	err = cl2.Resign(context.Background())
 	assert.NoError(t, err)
 

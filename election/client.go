@@ -14,11 +14,6 @@ import (
 )
 
 var (
-	// ErrCampaignInProgress is returned when a client tries to start a second
-	// camapaign if they are either (1) already the leader or (2) not the leader
-	// but already campaigning.
-	ErrCampaignInProgress = errors.New("election: campaign already in progress")
-
 	// ErrSessionExpired is returned by Campaign() if the underlying session
 	// (lease) has expired.
 	ErrSessionExpired = errors.New("election: session expired")
@@ -31,7 +26,7 @@ var (
 // Client encapsulates a client of etcd-backed leader elections.
 type Client struct {
 	mu  sync.RWMutex
-	cMu sync.RWMutex // campaign lock
+	cMu sync.RWMutex // campaign lock to protect concurrency.Election.leaderSession
 
 	prefix string
 	opts   clientOpts

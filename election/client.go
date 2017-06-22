@@ -53,7 +53,7 @@ func NewClient(cli *clientv3.Client, prefix string, options ...ClientOption) (*C
 		etcdClient: cli,
 	}
 
-	if err := cl.resetSession(); err != nil {
+	if err := cl.resetSessionAndElection(); err != nil {
 		return nil, err
 	}
 
@@ -92,7 +92,7 @@ func (c *Client) Campaign(ctx context.Context, val string) (<-chan struct{}, err
 	// if current session is dead we need to create a new one
 	select {
 	case <-session.Done():
-		err := c.resetSession()
+		err := c.resetSessionAndElection()
 		if err != nil {
 			return nil, err
 		}
@@ -167,7 +167,7 @@ func (c *Client) Close() error {
 	return nil
 }
 
-func (c *Client) resetSession() error {
+func (c *Client) resetSessionAndElection() error {
 	session, err := concurrency.NewSession(c.etcdClient, c.opts.sessionOpts...)
 	if err != nil {
 		return err

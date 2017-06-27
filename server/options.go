@@ -31,7 +31,8 @@ const (
 	// By default keepAlives are enabled for TCP connections.
 	defaultTCPConnectionKeepAlive = true
 
-	// By default the keep alive period is not set.
+	// By default the keep alive period is not set and the actual keep alive
+	// period is determined by the OS and the platform.
 	defaultTCPConnectionKeepAlivePeriod = 0
 )
 

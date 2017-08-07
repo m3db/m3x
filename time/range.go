@@ -61,6 +61,23 @@ func (r Range) Overlaps(other Range) bool {
 	return r.End.After(other.Start) && r.Start.Before(other.End)
 }
 
+// SqueezeWithin squeezes the receiver `Range` to be contained within the
+// provided argument range iff there is an overlap between the two. It also
+// returns a bool indicating if it was able to squeeze the range successfully.
+func (r Range) SqueezeWithin(other Range) (Range, bool) {
+	if !r.Overlaps(other) {
+		return Range{}, false
+	}
+	newRange := r
+	if newRange.Start.Before(other.Start) {
+		newRange.Start = other.Start
+	}
+	if newRange.End.After(other.End) {
+		newRange.End = other.End
+	}
+	return newRange, true
+}
+
 // Since returns the time range since a given point in time.
 func (r Range) Since(t time.Time) Range {
 	if t.Before(r.Start) {

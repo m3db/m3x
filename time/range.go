@@ -61,10 +61,10 @@ func (r Range) Overlaps(other Range) bool {
 	return r.End.After(other.Start) && r.Start.Before(other.End)
 }
 
-// SqueezeWithin squeezes the receiver `Range` to be contained within the
+// Intersect calculates the intersection of the receiver range against the
 // provided argument range iff there is an overlap between the two. It also
-// returns a bool indicating if it was able to squeeze the range successfully.
-func (r Range) SqueezeWithin(other Range) (Range, bool) {
+// returns a bool indicating if there was a valid intersection.
+func (r Range) Intersect(other Range) (Range, bool) {
 	if !r.Overlaps(other) {
 		return Range{}, false
 	}

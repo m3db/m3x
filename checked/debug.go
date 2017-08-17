@@ -44,7 +44,11 @@ var (
 )
 
 var tracebackCallersPool = sync.Pool{New: func() interface{} {
-	return make([]uintptr, tracebackMaxDepth)
+	// Pools should generally only return pointer types, since a pointer
+	// can be put into the return interface value without an allocation.
+	// Consequently, we return a pointer to a slice instead of just a slice.
+	pc := make([]uintptr, tracebackMaxDepth)
+	return &pc
 }}
 
 var tracebackEntryPool = sync.Pool{New: func() interface{} {
@@ -189,7 +193,7 @@ func (d *debugger) append(event debuggerEvent, ref int, pc []uintptr) {
 			// Shift all tracebacks back one if at end of traceback cycles
 			slice := d.entries[0]
 			for i, entry := range slice {
-				tracebackCallersPool.Put(entry.pc)
+				tracebackCallersPool.Put(&entry.pc)
 				entry.pc = nil
 				tracebackEntryPool.Put(entry)
 				slice[i] = nil
@@ -290,7 +294,7 @@ func tracebackEvent(c *RefCount, ref int, e debuggerEvent) {
 
 	d := getDebuggerRef(c)
 	depth := tracebackMaxDepth
-	pc := tracebackCallersPool.Get().([]uintptr)
+	pc := *(tracebackCallersPool.Get().(*[]uintptr))
 	if capacity := cap(pc); capacity < depth {
 		// Defensive programming here in case someone changes
 		// the max depth during runtime

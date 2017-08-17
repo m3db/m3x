@@ -65,7 +65,7 @@ func TestRWMutexReportEvery(t *testing.T) {
 	}()
 
 	// Wait for writer to appear
-	for atomic.LoadInt64(&mutex.writers) != 1 {
+	if atomic.LoadInt64(&mutex.writers) != 1 {
 		time.Sleep(time.Millisecond)
 	}
 

@@ -56,7 +56,7 @@ func (t MetricSanitizationType) String() string {
 	return "unknown"
 }
 
-// UnmarshalYAML unmarshals an MetricSanitizationType into a valid type from string.
+// UnmarshalYAML unmarshals a MetricSanitizationType into a valid type from string.
 func (t *MetricSanitizationType) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var str string
 	if err := unmarshal(&str); err != nil {

@@ -46,9 +46,11 @@ var (
 var tracebackCallersPool = sync.Pool{New: func() interface{} {
 	// Pools should generally only return pointer types, since a pointer
 	// can be put into the return interface value without an allocation.
-	// Consequently, we return a pointer to a slice instead of just a slice.
-	pc := make([]uintptr, tracebackMaxDepth)
-	return &pc
+	// However, since this package is used just for debugging, we make the
+	// tradeoff of greater code clarity by putting slices directly into the
+	// pool at the cost of an additional allocation of the three words which
+	// comprise the slice on each put.
+	return make([]uintptr, tracebackMaxDepth)
 }}
 
 var tracebackEntryPool = sync.Pool{New: func() interface{} {
@@ -185,7 +187,7 @@ func (d *debugger) append(event debuggerEvent, ref int, pc []uintptr) {
 	entry := tracebackEntryPool.Get().(*debuggerEntry)
 	entry.event = event
 	entry.ref = ref
-	entry.pc = &pc
+	entry.pc = pc
 	entry.t = time.Now()
 	d.entries[idx] = append(d.entries[idx], entry)
 	if event == finalizeEvent {
@@ -193,7 +195,7 @@ func (d *debugger) append(event debuggerEvent, ref int, pc []uintptr) {
 			// Shift all tracebacks back one if at end of traceback cycles
 			slice := d.entries[0]
 			for i, entry := range slice {
-				tracebackCallersPool.Put(entry.pc)
+				tracebackCallersPool.Put(entry.pc) // nolint: megacheck
 				entry.pc = nil
 				tracebackEntryPool.Put(entry)
 				slice[i] = nil
@@ -237,13 +239,13 @@ func (d *debuggerRef) Finalize() {
 type debuggerEntry struct {
 	event debuggerEvent
 	ref   int
-	pc    *[]uintptr
+	pc    []uintptr
 	t     time.Time
 }
 
 func (e *debuggerEntry) String() string {
 	buf := bytes.NewBuffer(nil)
-	frames := runtime.CallersFrames(*e.pc)
+	frames := runtime.CallersFrames(e.pc)
 	for {
 		frame, more := frames.Next()
 		buf.WriteString(frame.Function)
@@ -294,7 +296,7 @@ func tracebackEvent(c *RefCount, ref int, e debuggerEvent) {
 
 	d := getDebuggerRef(c)
 	depth := tracebackMaxDepth
-	pc := *(tracebackCallersPool.Get().(*[]uintptr))
+	pc := tracebackCallersPool.Get().([]uintptr)
 	if capacity := cap(pc); capacity < depth {
 		// Defensive programming here in case someone changes
 		// the max depth during runtime

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Uber Technologies, Inc.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -78,7 +78,7 @@ func (t *MetricSanitizationType) UnmarshalYAML(unmarshal func(interface{}) error
 		str, strings.Join(strs, ", "))
 }
 
-// SanitizeOptions returns the appropriate sanitization options for the type.
+// Options returns the appropriate sanitization options for the type.
 func (t *MetricSanitizationType) Options() *tally.SanitizeOptions {
 	switch *t {
 	case NoMetricSanitization:

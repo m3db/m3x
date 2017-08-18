@@ -37,6 +37,9 @@ const (
 
 	// M3MetricSanitization performs M3 metric sanitization.
 	M3MetricSanitization
+
+	// DefaultMetricSanitization is the default extended metrics level.
+	DefaultMetricSanitization = NoMetricSanitization
 )
 
 var (
@@ -63,7 +66,7 @@ func (t *MetricSanitizationType) UnmarshalYAML(unmarshal func(interface{}) error
 		return err
 	}
 	if str == "" {
-		*t = NoMetricSanitization
+		*t = DefaultMetricSanitization
 		return nil
 	}
 	strs := make([]string, len(validMetricSanitizationTypes))
@@ -78,8 +81,8 @@ func (t *MetricSanitizationType) UnmarshalYAML(unmarshal func(interface{}) error
 		str, strings.Join(strs, ", "))
 }
 
-// Options returns the appropriate sanitization options for the type.
-func (t *MetricSanitizationType) Options() *tally.SanitizeOptions {
+// NewOptions returns a new set of sanitization options for the sanitization type.
+func (t *MetricSanitizationType) NewOptions() *tally.SanitizeOptions {
 	switch *t {
 	case NoMetricSanitization:
 		return nil

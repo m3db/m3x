@@ -185,7 +185,7 @@ func (d *debugger) append(event debuggerEvent, ref int, pc []uintptr) {
 	entry := tracebackEntryPool.Get().(*debuggerEntry)
 	entry.event = event
 	entry.ref = ref
-	entry.pc = pc
+	entry.pc = &pc
 	entry.t = time.Now()
 	d.entries[idx] = append(d.entries[idx], entry)
 	if event == finalizeEvent {
@@ -193,7 +193,7 @@ func (d *debugger) append(event debuggerEvent, ref int, pc []uintptr) {
 			// Shift all tracebacks back one if at end of traceback cycles
 			slice := d.entries[0]
 			for i, entry := range slice {
-				tracebackCallersPool.Put(&entry.pc)
+				tracebackCallersPool.Put(entry.pc)
 				entry.pc = nil
 				tracebackEntryPool.Put(entry)
 				slice[i] = nil
@@ -237,13 +237,13 @@ func (d *debuggerRef) Finalize() {
 type debuggerEntry struct {
 	event debuggerEvent
 	ref   int
-	pc    []uintptr
+	pc    *[]uintptr
 	t     time.Time
 }
 
 func (e *debuggerEntry) String() string {
 	buf := bytes.NewBuffer(nil)
-	frames := runtime.CallersFrames(e.pc)
+	frames := runtime.CallersFrames(*e.pc)
 	for {
 		frame, more := frames.Next()
 		buf.WriteString(frame.Function)

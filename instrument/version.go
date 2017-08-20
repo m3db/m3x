@@ -84,11 +84,12 @@ func (v *versionReporter) report() {
 	gauge := scope.Gauge(metricName)
 	gauge.Update(1.0)
 
+	ticker := time.NewTicker(v.opts.ReportInterval())
 	defer func() {
 		close(v.doneCh)
+		ticker.Stop()
 	}()
 
-	ticker := time.NewTicker(v.opts.ReportInterval())
 	for {
 		select {
 		case <-ticker.C:

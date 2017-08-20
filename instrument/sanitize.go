@@ -38,8 +38,8 @@ const (
 	// M3MetricSanitization performs M3 metric sanitization.
 	M3MetricSanitization
 
-	// DefaultMetricSanitization is the default extended metrics level.
-	DefaultMetricSanitization = NoMetricSanitization
+	// defaultMetricSanitization is the default metrics sanitization.
+	defaultMetricSanitization = NoMetricSanitization
 )
 
 var (
@@ -66,7 +66,7 @@ func (t *MetricSanitizationType) UnmarshalYAML(unmarshal func(interface{}) error
 		return err
 	}
 	if str == "" {
-		*t = DefaultMetricSanitization
+		*t = defaultMetricSanitization
 		return nil
 	}
 	strs := make([]string, len(validMetricSanitizationTypes))

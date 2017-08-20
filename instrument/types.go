@@ -21,6 +21,7 @@
 package instrument
 
 import (
+	"io"
 	"time"
 
 	"github.com/m3db/m3x/log"
@@ -32,6 +33,13 @@ import (
 type Reporter interface {
 	// Report reports information during runtime
 	Report()
+}
+
+// VersionReporter reports metrics about the binary version.
+type VersionReporter interface {
+	io.Closer
+
+	Start() error
 }
 
 // Options represents the options for instrumentation

@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	// Githash is the githash associated with this build. Overriden using ldflags
+	// Githash is the githash associated with this build. Overridden using ldflags
 	// at compile time. Example:
 	// $ go build -ldflags "-X github.com/m3db/m3x/instrument.Githash=abcdef" ...
 	// Adapted from: https://www.atatus.com/blog/golang-auto-build-versioning/

@@ -38,7 +38,7 @@ const (
 	// M3MetricSanitization performs M3 metric sanitization.
 	M3MetricSanitization
 
-	// defaultMetricSanitization is the default metrics sanitization.
+	// defaultMetricSanitization is the default metric sanitization.
 	defaultMetricSanitization = NoMetricSanitization
 )
 

@@ -39,6 +39,7 @@ type Reporter interface {
 type VersionReporter interface {
 	io.Closer
 
+	// Start begins the background version reporting routine.
 	Start() error
 }
 

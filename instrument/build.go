@@ -24,7 +24,7 @@ import (
 	"errors"
 	"log"
 	"runtime"
-	"sync/atomic"
+	"sync"
 	"time"
 )
 
@@ -71,13 +71,15 @@ func init() {
 }
 
 type buildReporter struct {
+	sync.Mutex
+
 	opts    Options
-	active  int64
+	active  bool
 	closeCh chan struct{}
 	doneCh  chan struct{}
 }
 
-// NewBuildReporter returns a new version reporter.
+// NewBuildReporter returns a new build version reporter.
 func NewBuildReporter(
 	opts Options,
 ) BuildReporter {
@@ -86,18 +88,21 @@ func NewBuildReporter(
 	}
 }
 
-func (v *buildReporter) Start() error {
-	if swapped := atomic.CompareAndSwapInt64(&v.active, 0, 1); !swapped {
+func (b *buildReporter) Start() error {
+	b.Lock()
+	defer b.Unlock()
+	if b.active {
 		return errAlreadyStarted
 	}
-	v.closeCh = make(chan struct{}, 1)
-	v.doneCh = make(chan struct{}, 1)
-	go v.report()
+	b.active = true
+	b.closeCh = make(chan struct{})
+	b.doneCh = make(chan struct{})
+	go b.report()
 	return nil
 }
 
-func (v *buildReporter) report() {
-	scope := v.opts.MetricsScope().Tagged(map[string]string{
+func (b *buildReporter) report() {
+	scope := b.opts.MetricsScope().Tagged(map[string]string{
 		"revision":   Revision,
 		"branch":     Branch,
 		"build-date": BuildDate,
@@ -106,9 +111,9 @@ func (v *buildReporter) report() {
 	gauge := scope.Gauge(metricName)
 	gauge.Update(1.0)
 
-	ticker := time.NewTicker(v.opts.ReportInterval())
+	ticker := time.NewTicker(b.opts.ReportInterval())
 	defer func() {
-		close(v.doneCh)
+		close(b.doneCh)
 		ticker.Stop()
 	}()
 
@@ -116,18 +121,20 @@ func (v *buildReporter) report() {
 		select {
 		case <-ticker.C:
 			gauge.Update(1.0)
-		case <-v.closeCh:
+		case <-b.closeCh:
 			return
 		}
 	}
 }
 
-func (v *buildReporter) Close() error {
-	if active := atomic.LoadInt64(&v.active); active == 0 {
+func (b *buildReporter) Close() error {
+	b.Lock()
+	defer b.Unlock()
+	if !b.active {
 		return errNotStarted
 	}
-	close(v.closeCh)
-	<-v.doneCh
-	atomic.StoreInt64(&v.active, 0)
+	close(b.closeCh)
+	<-b.doneCh
+	b.active = false
 	return nil
 }

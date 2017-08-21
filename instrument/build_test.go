@@ -65,6 +65,15 @@ func TestStopWithoutStart(t *testing.T) {
 	require.Error(t, rep.Close())
 }
 
+func TestMultipleStop(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	rep := NewBuildReporter(newTestOptions())
+	require.NoError(t, rep.Start())
+	go rep.Close()
+	go rep.Close()
+}
+
 func TestVersionReported(t *testing.T) {
 	defer leaktest.Check(t)()
 

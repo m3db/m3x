@@ -41,8 +41,8 @@ var (
 	// BuildDate is the date this build was created.
 	BuildDate = "unknown"
 
-	// LogAtStartup controls whether we log build information at startup.
-	LogAtStartup = false
+	// LogBuildInfoAtStartup controls whether we log build information at startup.
+	LogBuildInfoAtStartup = false
 
 	// goVersion is the current runtime version.
 	goVersion = runtime.Version()
@@ -65,7 +65,7 @@ func LogBuildInformation() {
 }
 
 func init() {
-	if LogAtStartup {
+	if LogBuildInfoAtStartup {
 		LogBuildInformation()
 	}
 }

@@ -44,7 +44,7 @@ func newTestOptions() Options {
 func TestStartStop(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	rep := NewVersionReporter(newTestOptions())
+	rep := NewBuildReporter(newTestOptions())
 	require.NoError(t, rep.Start())
 	require.NoError(t, rep.Close())
 }
@@ -52,7 +52,7 @@ func TestStartStop(t *testing.T) {
 func TestStartStart(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	rep := NewVersionReporter(newTestOptions())
+	rep := NewBuildReporter(newTestOptions())
 	defer rep.Close()
 	require.NoError(t, rep.Start())
 	require.Error(t, rep.Start())
@@ -61,7 +61,7 @@ func TestStartStart(t *testing.T) {
 func TestStopWithoutStart(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	rep := NewVersionReporter(newTestOptions())
+	rep := NewBuildReporter(newTestOptions())
 	require.Error(t, rep.Close())
 }
 
@@ -69,7 +69,7 @@ func TestVersionReported(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	opts := newTestOptions()
-	rep := NewVersionReporter(opts)
+	rep := NewBuildReporter(opts)
 	require.NoError(t, rep.Start())
 
 	testScope := opts.MetricsScope().(tally.TestScope)

@@ -35,11 +35,11 @@ type Reporter interface {
 	Report()
 }
 
-// VersionReporter reports metrics about the binary version.
-type VersionReporter interface {
+// BuildReporter reports metrics about the build version
+type BuildReporter interface {
 	io.Closer
 
-	// Start begins the background version reporting routine.
+	// Start begins the background version reporting routine
 	Start() error
 }
 

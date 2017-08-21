@@ -22,22 +22,32 @@ package instrument
 
 import (
 	"errors"
+	"log"
 	"runtime"
 	"sync/atomic"
 	"time"
 )
 
 var (
-	// Githash is the githash associated with this build. Overridden using ldflags
+	// Revision is the VCS revision associated with this build. Overridden using ldflags
 	// at compile time. Example:
-	// $ go build -ldflags "-X github.com/m3db/m3x/instrument.Githash=abcdef" ...
+	// $ go build -ldflags "-X github.com/m3db/m3x/instrument.Revision=abcdef" ...
 	// Adapted from: https://www.atatus.com/blog/golang-auto-build-versioning/
-	Githash = "unknown"
+	Revision = "unknown"
 
-	// GoVersion is the current runtime version
+	// Branch is the VCS branch associated with this build.
+	Branch = "unknown"
+
+	// BuildDate is the date this build was created.
+	BuildDate = "unknown"
+
+	// LogAtStartup controls whether we log build information at startup.
+	LogAtStartup = false
+
+	// goVersion is the current runtime version.
 	goVersion = runtime.Version()
 
-	// metricName is the emitted metric's name
+	// metricName is the emitted metric's name.
 	metricName = "build-information"
 )
 
@@ -46,40 +56,52 @@ var (
 	errNotStarted     = errors.New("reporter not started")
 )
 
-type versionReporter struct {
+// LogBuildInformation logs the build information to the provided logger.
+func LogBuildInformation() {
+	log.Printf("Go Runtime version: %s\n", goVersion)
+	log.Printf("Build Revision:     %s\n", Revision)
+	log.Printf("Build Branch:       %s\n", Branch)
+	log.Printf("Build Date:         %s\n", BuildDate)
+}
+
+func init() {
+	if LogAtStartup {
+		LogBuildInformation()
+	}
+}
+
+type buildReporter struct {
 	opts    Options
 	active  int64
 	closeCh chan struct{}
 	doneCh  chan struct{}
 }
 
-// NewVersionReporter returns a new version reporter
-func NewVersionReporter(
+// NewBuildReporter returns a new version reporter.
+func NewBuildReporter(
 	opts Options,
-) VersionReporter {
-	return &versionReporter{
+) BuildReporter {
+	return &buildReporter{
 		opts: opts,
 	}
 }
 
-func (v *versionReporter) Start() error {
-	if active := atomic.LoadInt64(&v.active); active != 0 {
+func (v *buildReporter) Start() error {
+	if swapped := atomic.CompareAndSwapInt64(&v.active, 0, 1); !swapped {
 		return errAlreadyStarted
 	}
-	atomic.StoreInt64(&v.active, 1)
 	v.closeCh = make(chan struct{}, 1)
 	v.doneCh = make(chan struct{}, 1)
 	go v.report()
 	return nil
 }
 
-func (v *versionReporter) report() {
-	v.opts.Logger().Infof("Go runtime version: %s", goVersion)
-	v.opts.Logger().Infof("Build githash: %s", Githash)
-
+func (v *buildReporter) report() {
 	scope := v.opts.MetricsScope().Tagged(map[string]string{
-		"githash":    Githash,
-		"go.version": goVersion,
+		"revision":   Revision,
+		"branch":     Branch,
+		"build-date": BuildDate,
+		"go-version": goVersion,
 	})
 	gauge := scope.Gauge(metricName)
 	gauge.Update(1.0)
@@ -100,7 +122,7 @@ func (v *versionReporter) report() {
 	}
 }
 
-func (v *versionReporter) Close() error {
+func (v *buildReporter) Close() error {
 	if active := atomic.LoadInt64(&v.active); active == 0 {
 		return errNotStarted
 	}

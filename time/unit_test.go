@@ -51,6 +51,28 @@ func TestUnitValue(t *testing.T) {
 	require.Equal(t, errUnrecognizedTimeUnit, err)
 }
 
+func TestUnitCount(t *testing.T) {
+	inputs := []struct {
+		u        Unit
+		d        time.Duration
+		expected int
+	}{
+		{Second, time.Second, 1},
+		{Millisecond, 10 * time.Millisecond, 10},
+		{Microsecond, time.Nanosecond, 0},
+		{Nanosecond, time.Microsecond, 1000},
+	}
+	for _, input := range inputs {
+		v, err := input.u.Count(input.d)
+		require.NoError(t, err)
+		require.Equal(t, input.expected, v)
+	}
+
+	invalidUnit := Unit(10)
+	_, err := invalidUnit.Count(time.Second)
+	require.Equal(t, errUnrecognizedTimeUnit, err)
+}
+
 func TestUnitIsValid(t *testing.T) {
 	inputs := []struct {
 		u        Unit

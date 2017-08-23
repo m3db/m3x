@@ -57,11 +57,17 @@ func (tu Unit) Value() (time.Duration, error) {
 }
 
 // Count returns the number of units contained within the duration.
-func (tu Unit) Count(d time.Duration) (int, error) {
-	if dur, found := unitsToDuration[tu]; found {
-		return int(d / dur), nil
+func (tu Unit) Count(d time.Duration) int {
+	if d < 0 {
+		return -1
 	}
-	return 0, errUnrecognizedTimeUnit
+
+	if dur, found := unitsToDuration[tu]; found {
+		return int(d / dur)
+	}
+
+	// Invalid unit.
+	return -1
 }
 
 // IsValid returns whether the given time unit is valid / supported.

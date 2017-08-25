@@ -43,6 +43,7 @@ var (
 	errConvertDurationToUnit = errors.New("unable to convert from duration to time unit")
 	errConvertUnitToDuration = errors.New("unable to convert from time unit to duration")
 	errMaxUnitForDuration    = errors.New("unable to determine the maximum unit for duration")
+	errNegativeDuraton       = errors.New("duration cannot be negative")
 )
 
 // Unit represents a time unit.
@@ -57,17 +58,28 @@ func (tu Unit) Value() (time.Duration, error) {
 }
 
 // Count returns the number of units contained within the duration.
-func (tu Unit) Count(d time.Duration) int {
+func (tu Unit) Count(d time.Duration) (int, error) {
 	if d < 0 {
-		return -1
+		return 0, errNegativeDuraton
 	}
 
 	if dur, found := unitsToDuration[tu]; found {
-		return int(d / dur)
+		return int(d / dur), nil
 	}
 
 	// Invalid unit.
-	return -1
+	return 0, errUnrecognizedTimeUnit
+}
+
+// MustCount is like Count but panics if d is negative or if tu is not
+// a valid Unit.
+func (tu Unit) MustCount(d time.Duration) int {
+	c, err := tu.Count(d)
+	if err != nil {
+		panic(err)
+	}
+
+	return c
 }
 
 // IsValid returns whether the given time unit is valid / supported.

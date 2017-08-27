@@ -18,24 +18,60 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package process provides functions for inspecting processes.
-package process
+package xsync_test
 
 import (
-	"fmt"
-	"os"
+	"log"
+	"net/http"
+	"sync"
+
+	"github.com/m3db/m3x/sync"
 )
 
-// NumFDs returns the number of file descriptors for a given process.
-// This is more efficient than the NumFDs() method in the psutils package
-// by avoiding reading the destination of the symlinks in the proc directory.
-func NumFDs(pid int) (int, error) {
-	statPath := fmt.Sprintf("/proc/%d/fd", pid)
-	d, err := os.Open(statPath)
-	if err != nil {
-		return 0, err
+func ExampleWorkerPool() {
+	var (
+		wg          sync.WaitGroup
+		workers     = xsync.NewWorkerPool(3)
+		errorCh     = make(chan error, 1)
+		numRequests = 9
+		responses   = make([]*http.Response, numRequests)
+	)
+
+	wg.Add(numRequests)
+	workers.Init()
+
+	for i := 0; i < numRequests; i++ {
+		// Capture loop variable.
+		i := i
+
+		// Execute request on worker pool.
+		workers.Go(func() {
+			defer wg.Done()
+
+			resp, err := http.Get("http://example.com/")
+			if err != nil {
+				// Return the first error that is encountered.
+				select {
+				case errorCh <- err:
+				default:
+				}
+
+				return
+			}
+
+			// Can concurrently modify responses since each iteration updates a
+			// different index.
+			responses[i] = resp
+		})
+
+		_ = i
 	}
-	fnames, err := d.Readdirnames(-1)
-	d.Close()
-	return len(fnames), err
+
+	// Wait for all requests to finish.
+	wg.Wait()
+
+	close(errorCh)
+	if err := <-errorCh; err != nil {
+		log.Fatal(err)
+	}
 }

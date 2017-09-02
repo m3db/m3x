@@ -21,8 +21,8 @@
 package xerrors_test
 
 import (
+	"fmt"
 	"log"
-	"net/http"
 
 	"github.com/m3db/m3x/errors"
 )
@@ -30,8 +30,11 @@ import (
 func ExampleMultiError() {
 	mutliErr := xerrors.NewMultiError()
 
-	for i := 0; i < 5; i++ {
-		_, err := http.Get("http://example.com/")
+	for i := 0; i < 3; i++ {
+		var err error
+
+		// Perform some work which may fail.
+
 		if err != nil {
 			// Add returns a new MultiError.
 			mutliErr = mutliErr.Add(err)
@@ -41,4 +44,7 @@ func ExampleMultiError() {
 	if err := mutliErr.FinalError(); err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Println("Success!")
+	// Output: Success!
 }

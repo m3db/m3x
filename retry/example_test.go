@@ -22,8 +22,8 @@ package xretry_test
 
 import (
 	"context"
+	"fmt"
 	"log"
-	"net/http"
 
 	"github.com/m3db/m3x/retry"
 )
@@ -46,11 +46,17 @@ func ExampleRetrier() {
 	}
 
 	fn := func() error {
-		_, err := http.Get("http://example.com/")
+		var err error
+
+		// Perform some work which may fail.
+
 		return err
 	}
 
 	if err := retrier.AttemptWhile(continueFn, fn); err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Println("Success!")
+	// Output: Success!
 }

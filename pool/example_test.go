@@ -20,7 +20,11 @@
 
 package pool_test
 
-import "github.com/m3db/m3x/pool"
+import (
+	"fmt"
+
+	"github.com/m3db/m3x/pool"
+)
 
 type exampleObject struct {
 	a, b, c int64
@@ -51,4 +55,7 @@ func ExampleObjectPool() {
 	// Reset the exampleObject and return it to the pool.
 	o.reset()
 	p.Put(o)
+
+	fmt.Println("Success!")
+	// Output: Success!
 }

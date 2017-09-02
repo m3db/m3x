@@ -21,12 +21,14 @@
 package xsync_test
 
 import (
+	"fmt"
 	"log"
-	"net/http"
 	"sync"
 
 	"github.com/m3db/m3x/sync"
 )
+
+type response struct{}
 
 func ExampleWorkerPool() {
 	var (
@@ -34,7 +36,7 @@ func ExampleWorkerPool() {
 		workers     = xsync.NewWorkerPool(3)
 		errorCh     = make(chan error, 1)
 		numRequests = 9
-		responses   = make([]*http.Response, numRequests)
+		responses   = make([]response, numRequests)
 	)
 
 	wg.Add(numRequests)
@@ -48,7 +50,11 @@ func ExampleWorkerPool() {
 		workers.Go(func() {
 			defer wg.Done()
 
-			resp, err := http.Get("http://example.com/")
+			var err error
+
+			// Perform some work which may fail.
+			resp := response{}
+
 			if err != nil {
 				// Return the first error that is encountered.
 				select {
@@ -74,4 +80,7 @@ func ExampleWorkerPool() {
 	if err := <-errorCh; err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Println("Success!")
+	// Output: Success!
 }

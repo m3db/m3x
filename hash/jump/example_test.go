@@ -21,6 +21,7 @@
 package jump_test
 
 import (
+	"fmt"
 	"hash/fnv"
 	"log"
 
@@ -30,7 +31,7 @@ import (
 func ExampleHash() {
 	var (
 		numBuckets int64 = 10
-		key              = []byte("foobar")
+		key              = []byte("foo")
 		hasher           = fnv.New64()
 	)
 
@@ -43,5 +44,6 @@ func ExampleHash() {
 	// Get which bucket the key is assigned to.
 	bucket := jump.Hash(keyHash, numBuckets)
 
-	log.Printf("key '%s' is assigned to bucket %d\n", string(key), bucket)
+	fmt.Printf("Key '%s' is assigned to bucket %d.\n", string(key), bucket)
+	// Output: Key 'foo' is assigned to bucket 9.
 }

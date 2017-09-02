@@ -30,10 +30,10 @@ type NowFn func() time.Time
 
 // Options represents the options for the clock.
 type Options interface {
-	// SetNowFn sets the nowFn.
+	// SetNowFn sets the NowFn.
 	SetNowFn(value NowFn) Options
 
-	// NowFn returns the nowFn.
+	// NowFn returns the NowFn.
 	NowFn() NowFn
 
 	// SetMaxPositiveSkew sets the maximum positive clock skew

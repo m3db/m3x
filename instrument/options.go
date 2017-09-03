@@ -24,7 +24,9 @@ import (
 	"time"
 
 	"github.com/m3db/m3x/log"
+
 	"github.com/uber-go/tally"
+	"go.uber.org/zap"
 )
 
 const (
@@ -34,6 +36,7 @@ const (
 
 type options struct {
 	logger         log.Logger
+	zap            *zap.Logger
 	scope          tally.Scope
 	samplingRate   float64
 	reportInterval time.Duration
@@ -42,8 +45,10 @@ type options struct {
 // NewOptions creates new instrument options.
 func NewOptions() Options {
 	logger := log.NewLevelLogger(log.SimpleLogger, log.LevelInfo)
+	zap := zap.L()
 	return &options{
 		logger:         logger,
+		zap:            zap,
 		scope:          tally.NoopScope,
 		samplingRate:   defaultSamplingRate,
 		reportInterval: defaultReportingInterval,
@@ -58,6 +63,16 @@ func (o *options) SetLogger(value log.Logger) Options {
 
 func (o *options) Logger() log.Logger {
 	return o.logger
+}
+
+func (o *options) SetZapLogger(value *zap.Logger) Options {
+	opts := *o
+	opts.zap = value
+	return &opts
+}
+
+func (o *options) ZapLogger() *zap.Logger {
+	return o.zap
 }
 
 func (o *options) SetMetricsScope(value tally.Scope) Options {

@@ -20,7 +20,11 @@
 
 package xerrors
 
-import "bytes"
+import (
+	"bytes"
+	"errors"
+	"fmt"
+)
 
 // FirstError will return the first non nil error
 func FirstError(errs ...error) error {
@@ -78,6 +82,19 @@ func (e renamedError) InnerError() error {
 
 type invalidParamsError struct {
 	containedError
+}
+
+// Wrap wraps an error with a message but preserves the type of the error.
+func Wrap(err error, msg string) error {
+	renamed := errors.New(msg + ": " + err.Error())
+	return NewRenamedError(err, renamed)
+}
+
+// Wrapf formats according to a format specifier and returns a new error
+// with that string as its value while preserving the type of the error.
+func Wrapf(err error, format string, args ...interface{}) error {
+	msg := fmt.Sprintf(format, args...)
+	return Wrap(err, msg)
 }
 
 // NewInvalidParamsError creates a new invalid params error

@@ -90,8 +90,8 @@ func Wrap(err error, msg string) error {
 	return NewRenamedError(err, renamed)
 }
 
-// Wrapf formats according to a format specifier and returns a new error
-// with that string as its value while preserving the type of the error.
+// Wrapf formats according to a format specifier and uses that string to
+// wrap an error while still preserving the type of the error.
 func Wrapf(err error, format string, args ...interface{}) error {
 	msg := fmt.Sprintf(format, args...)
 	return Wrap(err, msg)

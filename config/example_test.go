@@ -21,6 +21,7 @@
 package xconfig_test
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/m3db/m3x/config"
@@ -31,8 +32,10 @@ type config struct {
 }
 
 func ExampleLoadFile() {
-	cfg := &config{}
-	if err := xconfig.LoadFile(cfg, "/path/to/config/file"); err != nil {
+	var cfg config
+	if err := xconfig.LoadFile(&cfg, "testdata/conf.yaml"); err != nil {
 		log.Fatal(err)
 	}
+	fmt.Printf("listenAddress: %s\n", cfg.ListenAddress)
+	// Output: listenAddress: 0.0.0.0:8392
 }

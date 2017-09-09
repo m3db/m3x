@@ -138,8 +138,8 @@ func (s *server) Serve(l net.Listener) error {
 	return nil
 }
 
-func (s *server) serve() error {
-	connCh, errCh := xnet.StartForeverAcceptLoop(s.listener, s.retryOpts)
+func (s *server) serve() {
+	connCh, _ := xnet.StartForeverAcceptLoop(s.listener, s.retryOpts)
 	for conn := range connCh {
 		conn := conn
 		if tcpConn, ok := conn.(*net.TCPConn); ok {
@@ -161,7 +161,6 @@ func (s *server) serve() error {
 			}()
 		}
 	}
-	return <-errCh
 }
 
 func (s *server) Close() {

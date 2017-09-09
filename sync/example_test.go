@@ -28,7 +28,9 @@ import (
 	"github.com/m3db/m3x/sync"
 )
 
-type response struct{}
+type response struct {
+	a int
+}
 
 func ExampleWorkerPool() {
 	var (
@@ -53,7 +55,7 @@ func ExampleWorkerPool() {
 			var err error
 
 			// Perform some work which may fail.
-			resp := response{}
+			resp := response{a: i}
 
 			if err != nil {
 				// Return the first error that is encountered.
@@ -69,8 +71,6 @@ func ExampleWorkerPool() {
 			// different index.
 			responses[i] = resp
 		})
-
-		_ = i
 	}
 
 	// Wait for all requests to finish.
@@ -81,6 +81,11 @@ func ExampleWorkerPool() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Success!")
-	// Output: Success!
+	var total int
+	for _, r := range responses {
+		total += r.a
+	}
+	fmt.Printf("Total is %v", total)
+
+	// Output: Total is 36
 }

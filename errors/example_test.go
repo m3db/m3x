@@ -22,7 +22,7 @@ package xerrors_test
 
 import (
 	"fmt"
-	"log"
+	"strings"
 
 	"github.com/m3db/m3x/errors"
 )
@@ -31,9 +31,8 @@ func ExampleMultiError() {
 	mutliErr := xerrors.NewMultiError()
 
 	for i := 0; i < 3; i++ {
-		var err error
-
 		// Perform some work which may fail.
+		err := fmt.Errorf("error %d", i)
 
 		if err != nil {
 			// Add returns a new MultiError.
@@ -42,9 +41,9 @@ func ExampleMultiError() {
 	}
 
 	if err := mutliErr.FinalError(); err != nil {
-		log.Fatal(err)
+		msg := strings.Replace(err.Error(), "\n", "; ", -1)
+		fmt.Println(msg)
 	}
 
-	fmt.Println("Success!")
-	// Output: Success!
+	// Output: error 0; error 1; error 2
 }

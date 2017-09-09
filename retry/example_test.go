@@ -22,6 +22,7 @@ package xretry_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -45,18 +46,20 @@ func ExampleRetrier() {
 		}
 	}
 
+	var attempts int
 	fn := func() error {
-		var err error
-
 		// Perform some work which may fail.
 
-		return err
+		if attempts++; attempts == 3 {
+			fmt.Printf("Attempt %v succeeded", attempts)
+			return nil
+		}
+		return errors.New("test")
 	}
 
 	if err := retrier.AttemptWhile(continueFn, fn); err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Success!")
-	// Output: Success!
+	// Output: Attempt 3 succeeded
 }

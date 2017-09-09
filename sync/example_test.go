@@ -85,7 +85,7 @@ func ExampleWorkerPool() {
 	for _, r := range responses {
 		total += r.a
 	}
-	fmt.Printf("Total is %v", total)
 
+	fmt.Printf("Total is %v", total)
 	// Output: Total is 36
 }

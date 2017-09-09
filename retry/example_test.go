@@ -52,6 +52,8 @@ func ExampleRetrier() {
 
 		if attempts++; attempts == 3 {
 			fmt.Printf("Attempt %v succeeded", attempts)
+			// Output: Attempt 3 succeeded
+
 			return nil
 		}
 		return errors.New("test")
@@ -61,5 +63,4 @@ func ExampleRetrier() {
 		log.Fatal(err)
 	}
 
-	// Output: Attempt 3 succeeded
 }

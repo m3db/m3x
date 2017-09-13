@@ -19,7 +19,7 @@
 // THE SOFTWARE.
 
 // Package xlog implements a logging package.
-package xlog
+package log
 
 import (
 	"fmt"

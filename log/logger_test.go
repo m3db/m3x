@@ -28,6 +28,6 @@ import (
 
 func TestNullLogger(t *testing.T) {
 	require.NotPanics(t, func() {
-		NullLogger.WithFields(NewLogField("key", "value")).Info("msg")
+		NullLogger.WithFields(NewField("key", "value")).Info("msg")
 	})
 }

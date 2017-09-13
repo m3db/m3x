@@ -162,7 +162,7 @@ func (s *server) serve() {
 		}
 	}
 	err := <-errCh
-	s.log.WithFields(log.NewLogErrField(err)).
+	s.log.WithFields(log.NewErrField(err)).
 		Error("server unexpectedly closed")
 }
 

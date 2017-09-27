@@ -46,6 +46,8 @@ const (
 	SimpleExtendedMetrics
 
 	// ModerateExtendedMetrics describes a moderately verbose level of extended metrics:
+	// - number of active goroutines
+	// - number of configured gomaxprocs
 	// - number of file descriptors
 	ModerateExtendedMetrics
 

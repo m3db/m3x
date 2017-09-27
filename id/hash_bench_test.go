@@ -36,40 +36,66 @@ var (
 	testShortID, testMediumID, testLongID []byte
 )
 
-func BenchmarkMD5ShortID(b *testing.B) {
+func benchmarkMD5ShortID(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		HashFn(testShortID)
 	}
 }
 
-func BenchmarkMD5MediumID(b *testing.B) {
+func benchmarkMD5MediumID(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		HashFn(testMediumID)
 	}
 }
 
-func BenchmarkMD5LongID(b *testing.B) {
+func benchmarkMD5LongID(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		HashFn(testLongID)
 	}
 }
 
-func BenchmarkMurmur3Hash128ShortID(b *testing.B) {
+func benchmarkMurmur3Hash128ShortID(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Murmur3Hash128(testShortID)
 	}
 }
 
-func BenchmarkMurmur3Hash128MediumID(b *testing.B) {
+func benchmarkMurmur3Hash128MediumID(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Murmur3Hash128(testMediumID)
 	}
 }
 
-func BenchmarkMurmur3Hash128LongID(b *testing.B) {
+func benchmarkMurmur3Hash128LongID(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Murmur3Hash128(testLongID)
 	}
+}
+
+func BenchmarkHashingFunctions(b *testing.B) {
+	setup()
+
+	benchmarks := []struct {
+		description string
+		fn          func(b *testing.B)
+	}{
+		{description: "Benchmark MD5 for short id", fn: benchmarkMD5ShortID},
+		{description: "Benchmark MD5 for medium id", fn: benchmarkMD5MediumID},
+		{description: "Benchmark MD5 for long id", fn: benchmarkMD5LongID},
+		{description: "Benchmark 128-bit murmur3 hash for short id", fn: benchmarkMurmur3Hash128ShortID},
+		{description: "Benchmark 128-bit murmur3 hash for medium id", fn: benchmarkMurmur3Hash128MediumID},
+		{description: "Benchmark 128-bit murmur3 for long id", fn: benchmarkMurmur3Hash128LongID},
+	}
+	for _, bench := range benchmarks {
+		b.Run(bench.description, bench.fn)
+	}
+}
+
+func setup() {
+	s := rand.New(rand.NewSource(time.Now().UnixNano()))
+	testShortID = generateTestID(s, testShortIDSize)
+	testMediumID = generateTestID(s, testMediumIDSize)
+	testLongID = generateTestID(s, testLongIDSize)
 }
 
 func generateTestID(s *rand.Rand, size int) []byte {
@@ -78,11 +104,4 @@ func generateTestID(s *rand.Rand, size int) []byte {
 		id[i] = byte(s.Int63() % 256)
 	}
 	return id
-}
-
-func init() {
-	s := rand.New(rand.NewSource(time.Now().UnixNano()))
-	testShortID = generateTestID(s, testShortIDSize)
-	testMediumID = generateTestID(s, testMediumIDSize)
-	testLongID = generateTestID(s, testLongIDSize)
 }

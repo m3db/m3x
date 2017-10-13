@@ -101,6 +101,7 @@ func testSource(t *testing.T, errAfter int32, closeAfter int32, watchNum int) {
 
 type testSourceInput struct {
 	sync.Mutex
+
 	started    bool
 	callCount  int32
 	errAfter   int32

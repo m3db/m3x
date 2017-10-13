@@ -53,14 +53,17 @@ func testSource(t *testing.T, errAfter int32, closeAfter int32, watchNum int) {
 		wg.Add(1)
 		_, w, err := s.Watch()
 		assert.NoError(t, err)
+		assert.NotNil(t, w)
+		c := w.C()
+		assert.NotNil(t, c)
 
 		i := i
 		go func() {
 			var v interface{}
 			count := 0
-			for range w.C() {
+			for range c {
 				if v != nil {
-					assert.True(t, w.Get().(int64) >= v.(int64))
+					assert.True(t, w.Get().(int32) >= v.(int32))
 				}
 				v = w.Get()
 				if count > i {
@@ -81,7 +84,11 @@ func testSource(t *testing.T, errAfter int32, closeAfter int32, watchNum int) {
 		_, _, err := s.Watch()
 		assert.Error(t, err)
 		v := s.Get()
-		assert.NotNil(t, v)
+		if errAfter < closeAfter {
+			assert.Equal(t, v, errAfter)
+		} else {
+			assert.Equal(t, v, closeAfter)
+		}
 		// test Close again
 		s.Close()
 		assert.True(t, s.(*source).isClosed())
@@ -104,7 +111,7 @@ func (i *testSourceInput) Poll() (interface{}, error) {
 	time.Sleep(time.Millisecond)
 	if i.errAfter > 0 {
 		i.errAfter--
-		return time.Now().Unix(), nil
+		return i.callCount, nil
 	}
 	return nil, errors.New("mock error")
 }

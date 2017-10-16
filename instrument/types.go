@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Package instrument implements functions to make instrumenting code,
+// including metrics and logging, easier.
 package instrument
 
 import (
@@ -28,37 +30,37 @@ import (
 	"github.com/uber-go/tally"
 )
 
-// Reporter reports metrics about something every interval
+// Reporter reports metrics about a component every interval
 type Reporter interface {
 	// Start starts the reporter
-	Start(every time.Duration) error
+	Start() error
 	// Stop stops the reporter
 	Stop() error
 }
 
-// Options represents the options for instrumentation
+// Options represents the options for instrumentation.
 type Options interface {
-	// SetLogger sets the logger
-	SetLogger(value xlog.Logger) Options
+	// SetLogger sets the logger.
+	SetLogger(value log.Logger) Options
 
-	// Logger returns the logger
-	Logger() xlog.Logger
+	// Logger returns the logger.
+	Logger() log.Logger
 
-	// SetMetricsScope sets the metricsScope
+	// SetMetricsScope sets the metrics scope.
 	SetMetricsScope(value tally.Scope) Options
 
-	// MetricsScope returns the metricsScope
+	// MetricsScope returns the metrics scope.
 	MetricsScope() tally.Scope
 
-	// SetMetricsSamplingRate sets the metrics sampling rate
+	// SetMetricsSamplingRate sets the metrics sampling rate.
 	SetMetricsSamplingRate(value float64) Options
 
-	// SetMetricsSamplingRate returns the metrics sampling rate
+	// SetMetricsSamplingRate returns the metrics sampling rate.
 	MetricsSamplingRate() float64
 
-	// ReportInterval sets time between reporting many metrics within the system
+	// ReportInterval sets the time between reporting metrics within the system.
 	SetReportInterval(time.Duration) Options
 
-	// GetReportInterval returns the time between reporting many metrics within the system
+	// GetReportInterval returns the time between reporting metrics within the system.
 	ReportInterval() time.Duration
 }

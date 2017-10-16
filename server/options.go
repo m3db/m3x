@@ -18,11 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package xserver
+package server
 
 import (
+	"time"
+
 	"github.com/m3db/m3x/instrument"
 	"github.com/m3db/m3x/retry"
+)
+
+const (
+	// By default keepAlives are enabled for TCP connections.
+	defaultTCPConnectionKeepAlive = true
+
+	// By default the keep alive period is not set and the actual keep alive
+	// period is determined by the OS and the platform.
+	defaultTCPConnectionKeepAlivePeriod = 0
 )
 
 // Options provide a set of server options
@@ -33,23 +44,42 @@ type Options interface {
 	// InstrumentOptions returns the instrument options
 	InstrumentOptions() instrument.Options
 
-	// SetRetrier sets the retrier for accepting connections
-	SetRetrier(value xretry.Retrier) Options
+	// SetRetryOptions sets the retry options
+	SetRetryOptions(value retry.Options) Options
 
-	// Retrier returns the retrier for accepting connections
-	Retrier() xretry.Retrier
+	// RetryOptions returns the retry options
+	RetryOptions() retry.Options
+
+	// SetTCPConnectionKeepAlive sets the keep alive state for tcp connections.
+	SetTCPConnectionKeepAlive(value bool) Options
+
+	// TCPConnectionKeepAlive returns the keep alive state for tcp connections.
+	TCPConnectionKeepAlive() bool
+
+	// SetTCPConnectionKeepAlivePeriod sets the keep alive period for tcp connections.
+	// NB(xichen): on Linux this modifies both the idle time (i.e,. the time when the
+	// last packet is sent from the client and when the first keepAlive probe is sent)
+	// as well as the interval between keepAlive probes.
+	SetTCPConnectionKeepAlivePeriod(value time.Duration) Options
+
+	// TCPConnectionKeepAlivePeriod returns the keep alive period for tcp connections.
+	TCPConnectionKeepAlivePeriod() time.Duration
 }
 
 type options struct {
-	instrumentOpts instrument.Options
-	retrier        xretry.Retrier
+	instrumentOpts               instrument.Options
+	retryOpts                    retry.Options
+	tcpConnectionKeepAlive       bool
+	tcpConnectionKeepAlivePeriod time.Duration
 }
 
 // NewOptions creates a new set of server options
 func NewOptions() Options {
 	return &options{
-		instrumentOpts: instrument.NewOptions(),
-		retrier:        xretry.NewRetrier(xretry.NewOptions()),
+		instrumentOpts:               instrument.NewOptions(),
+		retryOpts:                    retry.NewOptions(),
+		tcpConnectionKeepAlive:       defaultTCPConnectionKeepAlive,
+		tcpConnectionKeepAlivePeriod: defaultTCPConnectionKeepAlivePeriod,
 	}
 }
 
@@ -63,12 +93,32 @@ func (o *options) InstrumentOptions() instrument.Options {
 	return o.instrumentOpts
 }
 
-func (o *options) SetRetrier(value xretry.Retrier) Options {
+func (o *options) SetRetryOptions(value retry.Options) Options {
 	opts := *o
-	opts.retrier = value
+	opts.retryOpts = value
 	return &opts
 }
 
-func (o *options) Retrier() xretry.Retrier {
-	return o.retrier
+func (o *options) RetryOptions() retry.Options {
+	return o.retryOpts
+}
+
+func (o *options) SetTCPConnectionKeepAlive(value bool) Options {
+	opts := *o
+	opts.tcpConnectionKeepAlive = value
+	return &opts
+}
+
+func (o *options) TCPConnectionKeepAlive() bool {
+	return o.tcpConnectionKeepAlive
+}
+
+func (o *options) SetTCPConnectionKeepAlivePeriod(value time.Duration) Options {
+	opts := *o
+	opts.tcpConnectionKeepAlivePeriod = value
+	return &opts
+}
+
+func (o *options) TCPConnectionKeepAlivePeriod() time.Duration {
+	return o.tcpConnectionKeepAlivePeriod
 }

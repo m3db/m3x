@@ -18,21 +18,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package xlog
+package log
 
 import (
 	"io"
 	"os"
 )
 
-// Configuration defines configuration for logging 'natch
+// Configuration defines configuration for logging.
 type Configuration struct {
-	File   string                 `json:"file",yaml:"file"`
-	Level  string                 `json:"level",yaml:"level"`
-	Fields map[string]interface{} `json:"fields",yaml:"fields"`
+	File   string                 `json:"file" yaml:"file"`
+	Level  string                 `json:"level" yaml:"level"`
+	Fields map[string]interface{} `json:"fields" yaml:"fields"`
 }
 
-// BuildLogger builds a new Logger based on the configuration
+// BuildLogger builds a new Logger based on the configuration.
 func (cfg Configuration) BuildLogger() (Logger, error) {
 	writer := io.Writer(os.Stdout)
 
@@ -48,7 +48,7 @@ func (cfg Configuration) BuildLogger() (Logger, error) {
 	logger := NewLogger(writer)
 
 	if len(cfg.Level) != 0 {
-		level, err := ParseLogLevel(cfg.Level)
+		level, err := ParseLevel(cfg.Level)
 		if err != nil {
 			return nil, err
 		}
@@ -57,9 +57,9 @@ func (cfg Configuration) BuildLogger() (Logger, error) {
 	}
 
 	if len(cfg.Fields) != 0 {
-		var fields []LogField
+		var fields []Field
 		for k, v := range cfg.Fields {
-			fields = append(fields, NewLogField(k, v))
+			fields = append(fields, NewField(k, v))
 		}
 		logger = logger.WithFields(fields...)
 	}

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package xretry
+package retry
 
 import (
 	"math"
@@ -46,7 +46,7 @@ type options struct {
 	jitter         bool
 }
 
-// NewOptions creates new retry options
+// NewOptions creates new retry options.
 func NewOptions() Options {
 	return &options{
 		scope:          tally.NoopScope,

@@ -50,10 +50,11 @@ var (
 
 type fileDescriptorsReporter struct {
 	sync.Mutex
-	state   fileDescriptorsReporterState
-	logger  xlog.Logger
-	fds     tally.Gauge
-	closeCh chan struct{}
+	state    fileDescriptorsReporterState
+	logger   xlog.Logger
+	fds      tally.Gauge
+	interval time.Duration
+	closeCh  chan struct{}
 }
 
 // NewFileDescriptorsReporter returns a new instrument.Reporter that
@@ -66,13 +67,14 @@ func NewFileDescriptorsReporter(
 	})
 
 	return &fileDescriptorsReporter{
-		logger:  iopts.Logger(),
-		fds:     scope.Gauge("fds"),
-		closeCh: make(chan struct{}, 1),
+		logger:   iopts.Logger(),
+		fds:      scope.Gauge("num-fds"),
+		interval: iopts.ReportInterval(),
+		closeCh:  make(chan struct{}, 1),
 	}
 }
 
-func (r *fileDescriptorsReporter) Start(every time.Duration) error {
+func (r *fileDescriptorsReporter) Start() error {
 	r.Lock()
 	defer r.Unlock()
 
@@ -93,7 +95,7 @@ func (r *fileDescriptorsReporter) Start(every time.Duration) error {
 
 	r.state = fileDescriptorsReporterStarted
 
-	go r.reportLoop(every)
+	go r.reportLoop()
 }
 
 func (r *fileDescriptorsReporter) Stop() error {
@@ -109,7 +111,7 @@ func (r *fileDescriptorsReporter) Stop() error {
 }
 
 func (r *fileDescriptorsReporter) reportLoop(every time.Duration) {
-	tick := time.NewTicker(reportInterval)
+	tick := time.NewTicker(r.interval)
 	defer tick.Stop()
 
 	for {

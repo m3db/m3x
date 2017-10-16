@@ -18,7 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package xserver
+// Package server implements a network server.
+package server
 
 import (
 	"net"
@@ -27,7 +28,8 @@ import (
 	"time"
 
 	"github.com/m3db/m3x/log"
-	"github.com/m3db/m3x/net"
+	xnet "github.com/m3db/m3x/net"
+	"github.com/m3db/m3x/retry"
 
 	"github.com/uber-go/tally"
 )
@@ -35,9 +37,12 @@ import (
 // Server is a server capable of listening to incoming traffic and closing itself
 // when it's shut down.
 type Server interface {
-	// ListenAndServe starts listening to new incoming connections and
+	// ListenAndServe forever listens to new incoming connections and
 	// handles data from those connections.
 	ListenAndServe() error
+
+	// Serve accepts and handles incoming connections on the listener l forever.
+	Serve(l net.Listener) error
 
 	// Close closes the server.
 	Close()
@@ -70,10 +75,13 @@ type removeConnectionFn func(conn net.Conn)
 type server struct {
 	sync.Mutex
 
-	address  string
-	listener net.Listener
-	opts     Options
-	log      xlog.Logger
+	address                      string
+	listener                     net.Listener
+	log                          log.Logger
+	retryOpts                    retry.Options
+	reportInterval               time.Duration
+	tcpConnectionKeepAlive       bool
+	tcpConnectionKeepAlivePeriod time.Duration
 
 	closed     bool
 	closedChan chan struct{}
@@ -91,13 +99,17 @@ type server struct {
 func NewServer(address string, handler Handler, opts Options) Server {
 	instrumentOpts := opts.InstrumentOptions()
 	scope := instrumentOpts.MetricsScope()
+
 	s := &server{
-		address:    address,
-		opts:       opts,
-		log:        instrumentOpts.Logger(),
-		closedChan: make(chan struct{}),
-		metrics:    newServerMetrics(scope),
-		handler:    handler,
+		address:                      address,
+		log:                          instrumentOpts.Logger(),
+		retryOpts:                    opts.RetryOptions(),
+		reportInterval:               instrumentOpts.ReportInterval(),
+		tcpConnectionKeepAlive:       opts.TCPConnectionKeepAlive(),
+		tcpConnectionKeepAlivePeriod: opts.TCPConnectionKeepAlivePeriod(),
+		closedChan:                   make(chan struct{}),
+		metrics:                      newServerMetrics(scope),
+		handler:                      handler,
 	}
 
 	// Set up the connection functions.
@@ -115,15 +127,27 @@ func (s *server) ListenAndServe() error {
 	if err != nil {
 		return err
 	}
-	s.listener = listener
+
+	return s.Serve(listener)
+}
+
+func (s *server) Serve(l net.Listener) error {
+	s.address = l.Addr().String()
+	s.listener = l
 	go s.serve()
 	return nil
 }
 
-func (s *server) serve() error {
-	connCh, errCh := xnet.StartAcceptLoop(s.listener, s.opts.Retrier())
+func (s *server) serve() {
+	connCh, errCh := xnet.StartForeverAcceptLoop(s.listener, s.retryOpts)
 	for conn := range connCh {
 		conn := conn
+		if tcpConn, ok := conn.(*net.TCPConn); ok {
+			tcpConn.SetKeepAlive(s.tcpConnectionKeepAlive)
+			if s.tcpConnectionKeepAlivePeriod != 0 {
+				tcpConn.SetKeepAlivePeriod(s.tcpConnectionKeepAlivePeriod)
+			}
+		}
 		if !s.addConnectionFn(conn) {
 			conn.Close()
 		} else {
@@ -137,7 +161,9 @@ func (s *server) serve() error {
 			}()
 		}
 	}
-	return <-errCh
+	err := <-errCh
+	s.log.WithFields(log.NewErrField(err)).
+		Error("server unexpectedly closed")
 }
 
 func (s *server) Close() {
@@ -199,7 +225,7 @@ func (s *server) removeConnection(conn net.Conn) {
 }
 
 func (s *server) reportMetrics() {
-	t := time.NewTicker(s.opts.InstrumentOptions().ReportInterval())
+	t := time.NewTicker(s.reportInterval)
 
 	for {
 		select {

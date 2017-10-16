@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package xwatch
+package watch
 
 import (
 	"errors"
@@ -28,27 +28,29 @@ import (
 	"github.com/m3db/m3x/log"
 )
 
-// ErrSourceClosed could be thrown from SourceInput to indicate that the Source should be closed
+// ErrSourceClosed indicates that the Source should be closed.
 var ErrSourceClosed = errors.New("source closed")
 
-// SourceInput provides data for Source
+// SourceInput provides data for Source,
 type SourceInput interface {
-	// Poll will be called by Source for data, any backoff/jitter logic should be handled here
+	// Poll will be called by Source for data. Any backoff/jitter logic should
+	// be handled here.
 	Poll() (interface{}, error)
 }
 
-// Source polls data by calling SourcePollFn and notifies its watches on updates
+// Source polls data by calling SourcePollFn and notifies its watches on updates.
 type Source interface {
-	xclose.SimpleCloser
+	close.SimpleCloser
 
-	// Get returns the latest value
+	// Get returns the latest value.
 	Get() interface{}
-	// Watch returns the value and an Watch
+
+	// Watch returns the value and a Watch.
 	Watch() (interface{}, Watch, error)
 }
 
-// NewSource returns a Source
-func NewSource(input SourceInput, logger xlog.Logger) Source {
+// NewSource returns a new Source.
+func NewSource(input SourceInput, logger log.Logger) Source {
 	s := &source{
 		input:  input,
 		w:      NewWatchable(),
@@ -62,10 +64,10 @@ func NewSource(input SourceInput, logger xlog.Logger) Source {
 type source struct {
 	sync.RWMutex
 
-	input       SourceInput
-	w           Watchable
-	closed      bool
-	logger      xlog.Logger
+	input  SourceInput
+	w      Watchable
+	closed bool
+	logger log.Logger
 }
 
 func (s *source) run() {
@@ -81,7 +83,9 @@ func (s *source) run() {
 			continue
 		}
 
-		err = s.w.Update(data)
+		if err = s.w.Update(data); err != nil {
+			s.logger.Errorf("watch source update error: %v", err)
+		}
 	}
 }
 

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package xwatch
+package watch
 
 import (
 	"fmt"
@@ -177,7 +177,7 @@ func TestAsyncWatch(t *testing.T) {
 
 		wg.Add(1)
 		go func() {
-			for _ = range s.C() {
+			for range s.C() {
 				r := rand.Int63n(100)
 				time.Sleep(time.Millisecond * time.Duration(r))
 			}

@@ -18,7 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package xdebug
+// Package debug provides utilities for debugging.
+package debug
 
 import (
 	"fmt"
@@ -50,7 +51,7 @@ func SetRWMutexStackBufferLength(value int) {
 // RWMutex is a debug wrapper for sync.RWMutex
 type RWMutex struct {
 	Name   string
-	Log    xlog.Logger
+	Log    log.Logger
 	Writer io.Writer
 
 	mutex          sync.RWMutex
@@ -98,7 +99,8 @@ func (m *RWMutex) RUnlock() {
 	atomic.AddInt64(&m.readers, -1)
 }
 
-// RLocker returns a Locker interface that implements the Lock and Unlock methods by calling rw.RLock and rw.RUnlock.
+// RLocker returns a Locker interface that implements the Lock and
+// Unlock methods by calling rw.RLock and rw.RUnlock.
 func (m *RWMutex) RLocker() sync.Locker {
 	return &rlocker{RWMutex: m}
 }
@@ -106,7 +108,12 @@ func (m *RWMutex) RLocker() sync.Locker {
 // Report reports the state of the RWMutex
 func (m *RWMutex) Report() {
 	writers := atomic.LoadInt64(&m.writers)
-	str := fmt.Sprintf("writers %d (pending %d) readers %d", writers, atomic.LoadInt64(&m.pendingWriters), atomic.LoadInt64(&m.readers))
+	str := fmt.Sprintf(
+		"writers %d (pending %d) readers %d",
+		writers,
+		atomic.LoadInt64(&m.pendingWriters),
+		atomic.LoadInt64(&m.readers),
+	)
 	if writers > 0 {
 		m.stateMutex.RLock()
 		str += fmt.Sprintf(", stack: %s", string(m.lastLockStack))
@@ -116,7 +123,7 @@ func (m *RWMutex) Report() {
 }
 
 // ReportEvery will report the state of the RWMutex at a regular interval
-func (m *RWMutex) ReportEvery(interval time.Duration) xclose.SimpleCloser {
+func (m *RWMutex) ReportEvery(interval time.Duration) close.SimpleCloser {
 	ticker := time.NewTicker(interval)
 	go func() {
 		for range ticker.C {

@@ -18,20 +18,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package xretry
+package retry
 
 import (
 	"errors"
 	"math/rand"
 	"time"
 
-	"github.com/m3db/m3x/errors"
+	xerrors "github.com/m3db/m3x/errors"
 
 	"github.com/uber-go/tally"
 )
 
 var (
-	// ErrWhileConditionFalse is raised when the while condition to a while retry method evaluates false
+	// ErrWhileConditionFalse is returned when the while condition to a while retry
+	// method evaluates false.
 	ErrWhileConditionFalse = errors.New("retry while condition evaluated to false")
 )
 
@@ -56,7 +57,7 @@ type retrierMetrics struct {
 	retries            tally.Counter
 }
 
-// NewRetrier creates a new retrier
+// NewRetrier creates a new retrier.
 func NewRetrier(opts Options) Retrier {
 	scope := opts.MetricsScope()
 	errorTags := struct {
@@ -107,7 +108,7 @@ func (r *retrier) attempt(continueFn ContinueFn, fn Fn) error {
 
 	start := time.Now()
 	err := fn()
-	duration := time.Now().Sub(start)
+	duration := time.Since(start)
 	attempt++
 	if err == nil {
 		r.metrics.successLatency.Record(duration)
@@ -139,7 +140,7 @@ func (r *retrier) attempt(continueFn ContinueFn, fn Fn) error {
 		r.metrics.retries.Inc(1)
 		start := time.Now()
 		err = fn()
-		duration := time.Now().Sub(start)
+		duration := time.Since(start)
 		attempt++
 		if err == nil {
 			r.metrics.successLatency.Record(duration)

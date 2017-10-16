@@ -39,16 +39,26 @@ import (
 )
 
 func TestFileDescriptorsReporter(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	scope := tally.NewTestScope("", nil)
 	iopts := instrument.NewOptions().SetMetricsScope(scope)
 
 	countOpen := 32
+	closeFds := func() {}
 	for i := 0; i < countOpen; i++ {
 		tmpFile, err := ioutil.TempFile("", "example")
 		if err != nil {
 			require.FailNow(t, fmt.Sprintf("could not open temp file: %v", err))
 		}
-		defer os.Remove(tmpFile.Name())
+
+		// Explicitly close with closeFds call so we can defer the leaktest
+		currCloseFds := closeFds
+		closeFds = func() {
+			currCloseFds()
+			assert.NoError(t, tmpFile.Close())
+			assert.NoError(t, os.Remove(tmpFile.Name()))
+		}
 	}
 
 	r := NewFileDescriptorsReporter(iopts)
@@ -67,6 +77,8 @@ func TestFileDescriptorsReporter(t *testing.T) {
 	assert.True(t, v.Value() >= float64(countOpen))
 
 	require.NoError(t, r.Stop())
+
+	closeFds()
 }
 
 func TestFileDescriptorsReporterDoesNotOpenMoreThanOnce(t *testing.T) {

@@ -18,18 +18,74 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// +build !linux
+package sync_test
 
-package process
+import (
+	"fmt"
+	"log"
+	"sync"
 
-import "github.com/shirou/gopsutil/process"
+	xsync "github.com/m3db/m3x/sync"
+)
 
-// NumFDs returns the number of file descriptors for a given process.
-func NumFDs(pid int) (int, error) {
-	process, err := process.NewProcess(int32(pid))
-	if err != nil {
-		return 0, err
+type response struct {
+	a int
+}
+
+func ExampleWorkerPool() {
+	var (
+		wg          sync.WaitGroup
+		workers     = xsync.NewWorkerPool(3)
+		errorCh     = make(chan error, 1)
+		numRequests = 9
+		responses   = make([]response, numRequests)
+	)
+
+	wg.Add(numRequests)
+	workers.Init()
+
+	for i := 0; i < numRequests; i++ {
+		// Capture loop variable.
+		i := i
+
+		// Execute request on worker pool.
+		workers.Go(func() {
+			defer wg.Done()
+
+			var err error
+
+			// Perform some work which may fail.
+			resp := response{a: i}
+
+			if err != nil {
+				// Return the first error that is encountered.
+				select {
+				case errorCh <- err:
+				default:
+				}
+
+				return
+			}
+
+			// Can concurrently modify responses since each iteration updates a
+			// different index.
+			responses[i] = resp
+		})
 	}
-	numFDs, err := process.NumFDs()
-	return int(numFDs), err
+
+	// Wait for all requests to finish.
+	wg.Wait()
+
+	close(errorCh)
+	if err := <-errorCh; err != nil {
+		log.Fatal(err)
+	}
+
+	var total int
+	for _, r := range responses {
+		total += r.a
+	}
+
+	fmt.Printf("Total is %v", total)
+	// Output: Total is 36
 }

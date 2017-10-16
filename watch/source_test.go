@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package xwatch
+package watch
 
 import (
 	"errors"
@@ -37,26 +37,30 @@ func TestSource(t *testing.T) {
 	testSource(t, 28, 30, 20)
 	testSource(t, 19, 21, 20)
 	testSource(t, 13, 15, 20)
+	testSource(t, 18, 22, 10)
+	testSource(t, 14, 12, 15)
 }
 
 func testSource(t *testing.T, errAfter int32, closeAfter int32, watchNum int) {
-	s := NewSource(&testSourceInput{callCount: 0, errAfter: errAfter, closeAfter: closeAfter}, xlog.SimpleLogger)
+	input := &testSourceInput{callCount: 0, errAfter: errAfter, closeAfter: closeAfter}
+	s := NewSource(input, log.SimpleLogger)
 
 	var wg sync.WaitGroup
 
-	// create a few watches
+	// Create a few watches.
 	for i := 0; i < watchNum; i++ {
 		wg.Add(1)
 		_, w, err := s.Watch()
 		assert.NoError(t, err)
+		assert.NotNil(t, w)
 
 		i := i
 		go func() {
 			var v interface{}
 			count := 0
-			for _ = range w.C() {
+			for range w.C() {
 				if v != nil {
-					assert.True(t, w.Get().(int64) >= v.(int64))
+					assert.True(t, w.Get().(int32) >= v.(int32))
 				}
 				v = w.Get()
 				if count > i {
@@ -68,7 +72,10 @@ func testSource(t *testing.T, errAfter int32, closeAfter int32, watchNum int) {
 		}()
 	}
 
-	// schedule a thread to close Source
+	// Only start serving after all watchers are created.
+	input.startServing()
+
+	// Schedule a thread to close Source.
 	wg.Add(1)
 	go func() {
 		for !s.(*source).isClosed() {
@@ -77,8 +84,12 @@ func testSource(t *testing.T, errAfter int32, closeAfter int32, watchNum int) {
 		_, _, err := s.Watch()
 		assert.Error(t, err)
 		v := s.Get()
-		assert.NotNil(t, v)
-		// test Close again
+		if errAfter < closeAfter {
+			assert.Equal(t, v, errAfter)
+		} else {
+			assert.Equal(t, v, closeAfter)
+		}
+		// Test Close again.
 		s.Close()
 		assert.True(t, s.(*source).isClosed())
 		assert.Equal(t, v, s.Get())
@@ -89,10 +100,27 @@ func testSource(t *testing.T, errAfter int32, closeAfter int32, watchNum int) {
 }
 
 type testSourceInput struct {
-	callCount, errAfter, closeAfter int32
+	sync.Mutex
+
+	started    bool
+	callCount  int32
+	errAfter   int32
+	closeAfter int32
+}
+
+func (i *testSourceInput) startServing() {
+	i.Lock()
+	i.started = true
+	i.Unlock()
 }
 
 func (i *testSourceInput) Poll() (interface{}, error) {
+	i.Lock()
+	started := i.started
+	i.Unlock()
+	if !started {
+		return i.callCount, nil
+	}
 	if i.callCount >= i.closeAfter {
 		return nil, ErrSourceClosed
 	}
@@ -100,7 +128,7 @@ func (i *testSourceInput) Poll() (interface{}, error) {
 	time.Sleep(time.Millisecond)
 	if i.errAfter > 0 {
 		i.errAfter--
-		return time.Now().Unix(), nil
+		return i.callCount, nil
 	}
 	return nil, errors.New("mock error")
 }

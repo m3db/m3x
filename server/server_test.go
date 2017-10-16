@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package xserver
+package server
 
 import (
 	"fmt"
@@ -37,13 +37,14 @@ const (
 	testListenAddress = "127.0.0.1:0"
 )
 
+// nolint: unparam
 func testServer(addr string) (*server, *mockHandler, *int32, *int32) {
 	var (
 		numAdded   int32
 		numRemoved int32
 	)
 
-	opts := NewOptions().SetRetrier(xretry.NewRetrier(xretry.NewOptions().SetMaxRetries(2)))
+	opts := NewOptions().SetRetryOptions(retry.NewOptions().SetMaxRetries(2))
 	opts = opts.SetInstrumentOptions(opts.InstrumentOptions().SetReportInterval(time.Second))
 
 	h := newMockHandler()
@@ -99,6 +100,20 @@ func TestServerListenAndClose(t *testing.T) {
 	require.Equal(t, int32(numClients), atomic.LoadInt32(numRemoved))
 	require.Equal(t, numClients, h.called())
 	require.Equal(t, expectedRes, h.res())
+}
+
+func TestServe(t *testing.T) {
+	s, _, _, _ := testServer(testListenAddress)
+
+	l, err := net.Listen("tcp", testListenAddress)
+	require.NoError(t, err)
+
+	err = s.Serve(l)
+	require.NoError(t, err)
+	require.Equal(t, l, s.listener)
+	require.Equal(t, l.Addr().String(), s.address)
+
+	s.Close()
 }
 
 type mockHandler struct {

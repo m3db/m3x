@@ -28,10 +28,12 @@ import (
 	"github.com/uber-go/tally"
 )
 
-// Reporter reports information during runtime
+// Reporter reports metrics about something every interval
 type Reporter interface {
-	// Report reports information during runtime
-	Report()
+	// Start starts the reporter
+	Start(every time.Duration) error
+	// Stop stops the reporter
+	Stop() error
 }
 
 // Options represents the options for instrumentation

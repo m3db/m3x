@@ -18,11 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// +build linux
-
-package linux
-
-// We explicitly set build tags for linux to only test this on linux.
+package instrument
 
 import (
 	"fmt"
@@ -31,18 +27,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/m3db/m3x/instrument"
-
+	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
 )
 
-func TestFileDescriptorsReporter(t *testing.T) {
+func TestProcessReporter(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	scope := tally.NewTestScope("", nil)
-	iopts := instrument.NewOptions().SetMetricsScope(scope)
 
 	countOpen := 32
 	closeFds := func() {}
@@ -53,6 +47,7 @@ func TestFileDescriptorsReporter(t *testing.T) {
 		}
 
 		// Explicitly close with closeFds call so we can defer the leaktest
+		// and it always executes last
 		currCloseFds := closeFds
 		closeFds = func() {
 			currCloseFds()
@@ -61,41 +56,38 @@ func TestFileDescriptorsReporter(t *testing.T) {
 		}
 	}
 
-	r := NewFileDescriptorsReporter(iopts)
-
 	every := 10 * time.Millisecond
 
-	require.NoError(t, r.Start(every))
+	r := NewProcessReporter(scope, every)
+	require.NoError(t, r.Start())
 
 	time.Sleep(2 * every)
 
-	v, ok := scope.Snapshot().Gauges()["process.fds+platform=linux"]
+	_, ok := scope.Snapshot().Gauges()["process.num-fds+"]
 	if !ok {
 		require.FailNow(t, "metric for fds not found after waiting 2x interval")
 	}
-
-	assert.True(t, v.Value() >= float64(countOpen))
 
 	require.NoError(t, r.Stop())
 
 	closeFds()
 }
 
-func TestFileDescriptorsReporterDoesNotOpenMoreThanOnce(t *testing.T) {
-	r := NewFileDescriptorsReporter(instrument.NewOptions())
-	assert.NoError(t, r.Start(10*time.Millisecond))
-	assert.Error(t, r.Start(10*time.Millisecond))
+func TestProcessReporterDoesNotOpenMoreThanOnce(t *testing.T) {
+	r := NewProcessReporter(tally.NoopScope, 10*time.Millisecond)
+	assert.NoError(t, r.Start())
+	assert.Error(t, r.Start())
 	assert.NoError(t, r.Stop())
 }
 
-func TestFileDescriptorsReporterDoesNotCloseMoreThanOnce(t *testing.T) {
-	r := NewFileDescriptorsReporter(instrument.NewOptions())
-	assert.NoError(t, r.Start(10*time.Millisecond))
+func TestProcessReporterDoesNotCloseMoreThanOnce(t *testing.T) {
+	r := NewProcessReporter(tally.NoopScope, 10*time.Millisecond)
+	assert.NoError(t, r.Start())
 	assert.NoError(t, r.Stop())
 	assert.Error(t, r.Stop())
 }
 
-func TestFileDescriptorsReporterDoesNotOpenWithInvalidReportInterval(t *testing.T) {
-	r := NewFileDescriptorsReporter(instrument.NewOptions())
-	assert.Error(t, r.Start(0))
+func TestProcessReporterDoesNotOpenWithInvalidReportInterval(t *testing.T) {
+	r := NewProcessReporter(tally.NoopScope, 0)
+	assert.Error(t, r.Start())
 }

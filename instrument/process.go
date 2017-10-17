@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2016 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,7 +18,50 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package linux
+package instrument
 
-// Platform is the value of the "platform" tag used in metrics from this package
-const Platform = "linux"
+import (
+	"os"
+	"time"
+
+	"github.com/m3db/m3x/process"
+
+	"github.com/uber-go/tally"
+)
+
+type processReporter struct {
+	baseReporter
+	metrics processMetrics
+}
+
+type processMetrics struct {
+	NumFDs      tally.Gauge
+	NumFDErrors tally.Counter
+	pid         int
+}
+
+func (r *processMetrics) report() {
+	numFDs, err := process.NumFDs(r.pid)
+	if err == nil {
+		r.NumFDs.Update(float64(numFDs))
+	} else {
+		r.NumFDErrors.Inc(1)
+	}
+}
+
+// NewProcessReporter returns a new reporter that reports process
+// metrics, currently just the process file descriptor count.
+func NewProcessReporter(
+	scope tally.Scope,
+	reportInterval time.Duration,
+) Reporter {
+	r := new(processReporter)
+	r.init(reportInterval, r.metrics.report)
+
+	processScope := scope.SubScope("process")
+	r.metrics.NumFDs = processScope.Gauge("num-fds")
+	r.metrics.NumFDErrors = processScope.Counter("num-fd-errors")
+	r.metrics.pid = os.Getpid()
+
+	return r
+}

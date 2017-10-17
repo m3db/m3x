@@ -28,6 +28,9 @@ import:
 - package: github.com/uber-go/atomic
   version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
 
+- package: github.com/shirou/gopsutil
+  version: b62e301a8b9958eebb7299683eb57fab229a9501
+
 - package: github.com/go-ole/go-ole
   version: de8695c8edbf8236f30d6e1376e20b198a028d42
 

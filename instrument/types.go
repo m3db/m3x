@@ -30,11 +30,11 @@ import (
 	"github.com/uber-go/tally"
 )
 
-// Reporter reports metrics about a component every interval
+// Reporter reports metrics about a component.
 type Reporter interface {
-	// Start starts the reporter
+	// Start starts the reporter.
 	Start() error
-	// Stop stops the reporter
+	// Stop stops the reporter.
 	Stop() error
 }
 

@@ -175,6 +175,7 @@ func (r *runtimeMetrics) report(metricsType ExtendedMetricsType) {
 
 type extendedMetricsReporter struct {
 	baseReporter
+
 	metricsType ExtendedMetricsType
 	runtime     runtimeMetrics
 	process     processMetrics

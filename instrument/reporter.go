@@ -42,6 +42,7 @@ var (
 
 type baseReporter struct {
 	sync.Mutex
+
 	state          reporterState
 	reportInterval time.Duration
 	closeCh        chan struct{}

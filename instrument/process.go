@@ -31,6 +31,7 @@ import (
 
 type processReporter struct {
 	baseReporter
+
 	metrics processMetrics
 }
 

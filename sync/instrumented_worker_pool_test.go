@@ -29,9 +29,9 @@ import (
 	"time"
 
 	"github.com/m3db/m3x/instrument"
-	"github.com/uber-go/tally"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/uber-go/tally"
 )
 
 func tallyTestScopeKey(k string) string {

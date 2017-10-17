@@ -34,8 +34,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const keySuffix = "+"
-
 func tallyTestScopeKey(k string) string {
 	return k + "+"
 }

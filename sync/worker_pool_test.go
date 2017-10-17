@@ -121,3 +121,10 @@ func TestGoWithTimeout(t *testing.T) {
 
 	require.Equal(t, uint32(testWorkerPoolSize+1), count)
 }
+
+func TestInitClose(t *testing.T) {
+	p := NewWorkerPool(testWorkerPoolSize)
+	require.Error(t, p.Close())
+	p.Init()
+	require.NoError(t, p.Close())
+}

@@ -22,67 +22,29 @@
 package sync
 
 import (
-	"errors"
 	"time"
 )
 
-var (
-	errAllRoutinesNotFinished = errors.New("unable to close pool, not all workers have finished execution")
-)
+// Work is a unit of item to be worked on.
+type Work func()
 
-type workerPool struct {
-	workCh chan struct{}
-}
+// WorkerPool provides a pool for goroutines.
+type WorkerPool interface {
+	// Init initializes the pool.
+	Init()
 
-// NewWorkerPool creates a new worker pool.
-func NewWorkerPool(size int) WorkerPool {
-	return &workerPool{workCh: make(chan struct{}, size)}
-}
+	// Go waits until the next worker becomes available and executes it.
+	Go(work Work)
 
-func (p *workerPool) Init() {
-	for i := 0; i < cap(p.workCh); i++ {
-		p.workCh <- struct{}{}
-	}
-}
+	// GoIfAvailable performs the work inside a worker if one is available and
+	// returns true, or false otherwise.
+	GoIfAvailable(work Work) bool
 
-func (p *workerPool) Go(work Work) {
-	token := <-p.workCh
-	go func() {
-		work()
-		p.workCh <- token
-	}()
-}
+	// GoWithTimeout waits up to the given timeout for a worker to become
+	// available, returning true if a worker becomes available, or false
+	// otherwise
+	GoWithTimeout(work Work, timeout time.Duration) bool
 
-func (p *workerPool) GoIfAvailable(work Work) bool {
-	select {
-	case token := <-p.workCh:
-		go func() {
-			work()
-			p.workCh <- token
-		}()
-		return true
-	default:
-		return false
-	}
-}
-
-func (p *workerPool) GoWithTimeout(work Work, timeout time.Duration) bool {
-	select {
-	case token := <-p.workCh:
-		go func() {
-			work()
-			p.workCh <- token
-		}()
-		return true
-	case <-time.After(timeout):
-		return false
-	}
-}
-
-func (p *workerPool) Close() error {
-	if len(p.workCh) < cap(p.workCh) {
-		return errAllRoutinesNotFinished
-	}
-	close(p.workCh)
-	return nil
+	// Close releases any held resources.
+	Close() error
 }

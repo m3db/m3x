@@ -32,7 +32,7 @@ import (
 
 type instrumentedWorkerPool struct {
 	pool    WorkerPool
-	closeCh chan struct{}
+	closed  int64
 	size    int
 	metrics workerPoolMetrics
 	opts    instrument.Options
@@ -42,7 +42,6 @@ type instrumentedWorkerPool struct {
 func NewInstrumentedWorkerPool(size int, opts instrument.Options) WorkerPool {
 	return &instrumentedWorkerPool{
 		pool:    NewWorkerPool(size),
-		closeCh: make(chan struct{}, 1),
 		size:    size,
 		metrics: newWorkerPoolMetrics(size, opts),
 		opts:    opts,
@@ -56,23 +55,23 @@ func (p *instrumentedWorkerPool) Init() {
 }
 
 func (p *instrumentedWorkerPool) Close() error {
+	closed := atomic.CompareAndSwapInt64(&p.closed, 0, 1)
+	if !closed {
+		return errAlreadyClosed
+	}
+
 	if err := p.pool.Close(); err != nil {
 		return err
 	}
-	close(p.closeCh)
 	return nil
 }
 
 func (p *instrumentedWorkerPool) metricLoop() {
 	ticker := time.NewTicker(p.opts.ReportInterval())
 	defer ticker.Stop()
-	for {
-		select {
-		case <-p.closeCh:
-			return
-		case <-ticker.C:
-			p.metrics.update()
-		}
+	for atomic.LoadInt64(&p.closed) == 0 {
+		p.metrics.update()
+		<-ticker.C
 	}
 }
 

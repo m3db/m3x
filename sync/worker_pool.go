@@ -23,15 +23,18 @@ package sync
 
 import (
 	"errors"
+	"sync/atomic"
 	"time"
 )
 
 var (
 	errAllRoutinesNotFinished = errors.New("unable to close pool, not all workers have finished execution")
+	errAlreadyClosed          = errors.New("pool has already been closed")
 )
 
 type workerPool struct {
 	workCh chan struct{}
+	closed int64
 }
 
 // NewWorkerPool creates a new worker pool.
@@ -80,9 +83,15 @@ func (p *workerPool) GoWithTimeout(work Work, timeout time.Duration) bool {
 }
 
 func (p *workerPool) Close() error {
+	set := atomic.CompareAndSwapInt64(&p.closed, 0, 1)
+	if !set {
+		return errAlreadyClosed
+	}
+
 	if len(p.workCh) < cap(p.workCh) {
 		return errAllRoutinesNotFinished
 	}
+
 	close(p.workCh)
 	return nil
 }

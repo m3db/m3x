@@ -101,17 +101,12 @@ func TestInstrumentedWorkerPoolClose(t *testing.T) {
 	assert.NoError(t, p.Close())
 }
 func TestInstrumentedWorkerPool(t *testing.T) {
-	defer leaktest.CheckTimeout(t, time.Second)()
-
 	scope := tally.NewTestScope("", nil)
 	opts := instrument.NewOptions().
 		SetMetricsScope(scope).
 		SetReportInterval(100 * time.Millisecond)
 	p := NewInstrumentedWorkerPool(10, opts)
 	p.Init()
-	defer func() {
-		assert.NoError(t, p.Close())
-	}()
 
 	// Consume all available workers
 	var ready sync.WaitGroup

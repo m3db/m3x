@@ -30,6 +30,7 @@ import (
 
 	"github.com/m3db/m3x/instrument"
 
+	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"
 )
@@ -89,13 +90,28 @@ func assertMetrics(t *testing.T, wantG, wantC map[string]int64, s tally.TestScop
 	assert.FailNow(t, strings.Join(errors, "\n"))
 }
 
-func TestInstrumentedWorkerPool(t *testing.T) {
+func TestInstrumentedWorkerPoolClose(t *testing.T) {
+	defer leaktest.CheckTimeout(t, time.Second)()
 	scope := tally.NewTestScope("", nil)
 	opts := instrument.NewOptions().
 		SetMetricsScope(scope).
 		SetReportInterval(100 * time.Millisecond)
 	p := NewInstrumentedWorkerPool(10, opts)
 	p.Init()
+	assert.NoError(t, p.Close())
+}
+func TestInstrumentedWorkerPool(t *testing.T) {
+	defer leaktest.CheckTimeout(t, time.Second)()
+
+	scope := tally.NewTestScope("", nil)
+	opts := instrument.NewOptions().
+		SetMetricsScope(scope).
+		SetReportInterval(100 * time.Millisecond)
+	p := NewInstrumentedWorkerPool(10, opts)
+	p.Init()
+	defer func() {
+		assert.NoError(t, p.Close())
+	}()
 
 	// Consume all available workers
 	var ready sync.WaitGroup

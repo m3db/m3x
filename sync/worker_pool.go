@@ -83,13 +83,13 @@ func (p *workerPool) GoWithTimeout(work Work, timeout time.Duration) bool {
 }
 
 func (p *workerPool) Close() error {
+	if len(p.workCh) < cap(p.workCh) {
+		return errAllRoutinesNotFinished
+	}
+
 	set := atomic.CompareAndSwapInt64(&p.closed, 0, 1)
 	if !set {
 		return errAlreadyClosed
-	}
-
-	if len(p.workCh) < cap(p.workCh) {
-		return errAllRoutinesNotFinished
 	}
 
 	close(p.workCh)

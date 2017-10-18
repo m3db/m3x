@@ -60,10 +60,7 @@ func (p *instrumentedWorkerPool) Close() error {
 		return errAlreadyClosed
 	}
 
-	if err := p.pool.Close(); err != nil {
-		return err
-	}
-	return nil
+	return p.pool.Close()
 }
 
 func (p *instrumentedWorkerPool) metricLoop() {

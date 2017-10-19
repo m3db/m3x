@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Package hostid provides a configuration struct for resolving
+// a host ID from YAML.
 package hostid
 
 import (

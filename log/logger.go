@@ -123,26 +123,26 @@ func (f Fields) Len() int { return len(f) }
 func (f Fields) ValueAt(i int) Field { return f[i] }
 
 // NullLogger is a logger that emits nowhere.
-var NullLogger Logger = nullLogger{}
+var NullLogger Logger = &nullLogger{}
 
 type nullLogger struct {
 	fields Fields
 }
 
-func (nullLogger) Enabled(_ Level) bool                   { return false }
-func (nullLogger) Fatalf(msg string, args ...interface{}) {}
-func (nullLogger) Fatal(msg string)                       { os.Exit(1) }
-func (nullLogger) Errorf(msg string, args ...interface{}) {}
-func (nullLogger) Error(msg string)                       {}
-func (nullLogger) Warnf(msg string, args ...interface{})  {}
-func (nullLogger) Warn(msg string)                        {}
-func (nullLogger) Infof(msg string, args ...interface{})  {}
-func (nullLogger) Info(msg string)                        {}
-func (nullLogger) Debugf(msg string, args ...interface{}) {}
-func (nullLogger) Debug(msg string)                       {}
-func (l nullLogger) Fields() LoggerFields                 { return l.fields }
+func (*nullLogger) Enabled(_ Level) bool                   { return false }
+func (*nullLogger) Fatalf(msg string, args ...interface{}) {}
+func (*nullLogger) Fatal(msg string)                       { os.Exit(1) }
+func (*nullLogger) Errorf(msg string, args ...interface{}) {}
+func (*nullLogger) Error(msg string)                       {}
+func (*nullLogger) Warnf(msg string, args ...interface{})  {}
+func (*nullLogger) Warn(msg string)                        {}
+func (*nullLogger) Infof(msg string, args ...interface{})  {}
+func (*nullLogger) Info(msg string)                        {}
+func (*nullLogger) Debugf(msg string, args ...interface{}) {}
+func (*nullLogger) Debug(msg string)                       {}
+func (l *nullLogger) Fields() LoggerFields                 { return l.fields }
 
-func (l nullLogger) WithFields(newFields ...Field) Logger {
+func (l *nullLogger) WithFields(newFields ...Field) Logger {
 	existingLen := 0
 
 	existingFields := l.Fields()
@@ -155,7 +155,7 @@ func (l nullLogger) WithFields(newFields ...Field) Logger {
 		fields = append(fields, existingFields.ValueAt(i))
 	}
 	fields = append(fields, newFields...)
-	return nullLogger{Fields(fields)}
+	return &nullLogger{Fields(fields)}
 }
 
 // SimpleLogger prints logging information to standard out.

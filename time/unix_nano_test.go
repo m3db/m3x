@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,4 +33,31 @@ func TestUnixNano(t *testing.T) {
 	unixNano := ToUnixNano(time)
 	require.Equal(t, UnixNano(1000), unixNano)
 	require.Equal(t, time, unixNano.ToTime())
+}
+
+func TestUnixNanoBefore(t *testing.T) {
+	t0 := UnixNano(0)
+	t1 := UnixNano(1)
+
+	assert.Equal(t, true, t0.Before(t1))
+	assert.Equal(t, false, t1.Before(t0))
+	assert.Equal(t, false, t0.Before(t0))
+}
+
+func TestUnixNanoAfter(t *testing.T) {
+	t0 := UnixNano(0)
+	t1 := UnixNano(1)
+
+	assert.Equal(t, false, t0.After(t1))
+	assert.Equal(t, true, t1.After(t0))
+	assert.Equal(t, false, t0.After(t0))
+}
+
+func TestUnixNanoEqual(t *testing.T) {
+	t0 := UnixNano(0)
+	t1 := UnixNano(1)
+
+	assert.Equal(t, false, t0.Equal(t1))
+	assert.Equal(t, false, t1.Equal(t0))
+	assert.Equal(t, true, t0.Equal(t0))
 }

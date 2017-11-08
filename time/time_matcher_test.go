@@ -18,4 +18,5 @@ func TestMatcher(t *testing.T) {
 	require.True(t, t1Matcher.Matches(t2))
 
 	require.NotEqual(t, t1Matcher, t2.Add(1*time.Hour))
+	require.NotEqual(t, t1Matcher, 10)
 }

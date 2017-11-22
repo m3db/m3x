@@ -157,7 +157,7 @@ func (r *runtimeMetrics) report(metricsType ExtendedMetricsType) {
 	r.MemoryHeapIdle.Update(float64(memStats.HeapIdle))
 	r.MemoryHeapInuse.Update(float64(memStats.HeapInuse))
 	r.MemoryStack.Update(float64(memStats.StackInuse))
-	r.GCCPUFraction.Update(float64(memStats.GCCPUFraction))
+	r.GCCPUFraction.Update(memStats.GCCPUFraction)
 
 	// memStats.NumGC is a perpetually incrementing counter (unless it wraps at 2^32).
 	num := memStats.NumGC

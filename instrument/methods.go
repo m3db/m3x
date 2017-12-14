@@ -44,7 +44,7 @@ type sampledTimer struct {
 // NewSampledTimer creates a new sampled timer.
 func NewSampledTimer(base tally.Timer, rate float64) (tally.Timer, error) {
 	if rate <= 0.0 || rate > 1.0 {
-		return nil, fmt.Errorf("sampling rate %f must be bewteen 0.0 and 1.0", rate)
+		return nil, fmt.Errorf("sampling rate %f must be between 0.0 and 1.0", rate)
 	}
 	return &sampledTimer{
 		Timer: base,

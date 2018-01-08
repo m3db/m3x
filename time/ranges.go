@@ -73,7 +73,7 @@ func (tr Ranges) AddRanges(other Ranges) Ranges {
 	return res
 }
 
-// Remove removes the time range from the collection of ranges.
+// RemoveRange removes the time range from the collection of ranges.
 func (tr Ranges) RemoveRange(r Range) Ranges {
 	res := tr.clone()
 	res.removeRangeInPlace(r)

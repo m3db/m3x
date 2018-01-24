@@ -40,8 +40,6 @@ func TestUnitValue(t *testing.T) {
 		{Minute, time.Minute},
 		{Hour, time.Hour},
 		{Day, 24 * time.Hour},
-		{Week, 24 * time.Hour * 7},
-		{Month, 24 * time.Hour * 30},
 		{Year, 24 * time.Hour * 365},
 	}
 	for _, input := range inputs {
@@ -68,8 +66,6 @@ func TestUnitCount(t *testing.T) {
 		{Minute, 2 * time.Minute, 2},
 		{Hour, 3 * time.Hour, 3},
 		{Day, 49 * time.Hour, 2},
-		{Week, 8 * 24 * time.Hour, 1},
-		{Month, 31 * 24 * time.Hour, 1},
 		{Year, 366 * 24 * time.Hour, 1},
 	}
 	for _, input := range inputs {
@@ -103,8 +99,6 @@ func TestUnitMustCount(t *testing.T) {
 		{Minute, 2 * time.Minute, 2},
 		{Hour, 3 * time.Hour, 3},
 		{Day, 49 * time.Hour, 2},
-		{Week, 24 * 7 * time.Hour, 1},
-		{Month, 24 * 61 * time.Hour, 2},
 		{Year, 24 * 366 * time.Hour, 1},
 	}
 	for _, input := range inputs {
@@ -138,8 +132,6 @@ func TestUnitIsValid(t *testing.T) {
 		{Minute, true},
 		{Hour, true},
 		{Day, true},
-		{Week, true},
-		{Month, true},
 		{Year, true},
 		{Unit(100), false},
 	}
@@ -160,8 +152,6 @@ func TestUnitFromDuration(t *testing.T) {
 		{time.Minute, Minute},
 		{time.Hour, Hour},
 		{24 * time.Hour, Day},
-		{7 * 24 * time.Hour, Week},
-		{30 * 24 * time.Hour, Month},
 		{365 * 24 * time.Hour, Year},
 	}
 	for _, input := range inputs {
@@ -193,9 +183,7 @@ func TestMaxUnitForDuration(t *testing.T) {
 		{20 * time.Hour, 20, Hour},
 		{24 * time.Hour, 1, Day},
 		{25 * time.Hour, 25, Hour},
-		{24 * 7 * time.Hour, 1, Week},
 		{24 * 8 * time.Hour, 8, Day},
-		{24 * 30 * time.Hour, 1, Month},
 		{24 * 31 * time.Hour, 31, Day},
 		{24 * 365 * time.Hour, 1, Year},
 		{24 * 366 * time.Hour, 366, Day},
@@ -210,9 +198,7 @@ func TestMaxUnitForDuration(t *testing.T) {
 		{-20 * time.Hour, -20, Hour},
 		{-24 * time.Hour, -1, Day},
 		{-25 * time.Hour, -25, Hour},
-		{-24 * 7 * time.Hour, -1, Week},
 		{-24 * 8 * time.Hour, -8, Day},
-		{-24 * 30 * time.Hour, -1, Month},
 		{-24 * 31 * time.Hour, -31, Day},
 	}
 	for _, input := range inputs {
@@ -234,8 +220,6 @@ func TestDurationFromUnit(t *testing.T) {
 		{Minute, time.Minute},
 		{Hour, time.Hour},
 		{Day, 24 * time.Hour},
-		{Week, 24 * time.Hour * 7},
-		{Month, 24 * time.Hour * 30},
 		{Year, 24 * time.Hour * 365},
 	}
 	for _, input := range inputs {
@@ -262,8 +246,6 @@ func TestUnitString(t *testing.T) {
 		{Minute, "m"},
 		{Hour, "h"},
 		{Day, "d"},
-		{Week, "w"},
-		{Month, "mon"},
 		{Year, "y"},
 		{None, "unknown"},
 	}

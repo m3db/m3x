@@ -38,8 +38,6 @@ const (
 	Minute
 	Hour
 	Day
-	Week
-	Month
 	Year
 )
 
@@ -163,8 +161,6 @@ var (
 		Minute:      "m",
 		Hour:        "h",
 		Day:         "d",
-		Week:        "w",
-		Month:       "mon",
 		Year:        "y",
 	}
 
@@ -177,8 +173,6 @@ var (
 		Minute:      time.Minute,
 		Hour:        time.Hour,
 		Day:         time.Hour * 24,
-		Week:        time.Hour * 24 * 7,
-		Month:       time.Hour * 24 * 30,
 		Year:        time.Hour * 24 * 365,
 	}
 	unitsByDurationDesc []Unit

@@ -28,6 +28,7 @@ import (
 
 	"github.com/m3db/m3x/checked"
 	"github.com/m3db/m3x/context"
+
 	"github.com/spaolacci/murmur3"
 )
 

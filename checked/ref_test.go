@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/m3db/m3x/resource"
+
 	"github.com/stretchr/testify/assert"
 )
 

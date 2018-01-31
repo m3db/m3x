@@ -24,9 +24,9 @@
 package ident
 
 import (
-	gomock "github.com/golang/mock/gomock"
-
 	checked "github.com/m3db/m3x/checked"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
 // Mock of ID interface

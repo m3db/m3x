@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Package ident provides utilities for working with identifiers.
 package ident
 
 import (
@@ -27,6 +28,7 @@ import (
 
 	"github.com/m3db/m3x/checked"
 	"github.com/m3db/m3x/context"
+	"github.com/spaolacci/murmur3"
 )
 
 // ID represents an immutable identifier for a timeseries.
@@ -61,6 +63,20 @@ type IdentifierPool interface {
 
 // Hash represents a form of ID suitable to be used as map keys.
 type Hash [md5.Size]byte
+
+// HashFn is the default hashing implementation for IDs.
+func HashFn(data []byte) Hash {
+	return md5.Sum(data)
+}
+
+// Hash128 is a 128-bit hash of an ID consisting of two unsigned 64-bit ints.
+type Hash128 [2]uint64
+
+// Murmur3Hash128 computes the 128-bit hash of an id.
+func Murmur3Hash128(data []byte) Hash128 {
+	h0, h1 := murmur3.Sum128(data)
+	return Hash128{h0, h1}
+}
 
 // A Datapoint is a single data value reported at a given time.
 type Datapoint struct {

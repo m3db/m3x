@@ -22,7 +22,6 @@ package ident
 
 import (
 	"bytes"
-	"crypto/md5"
 	"fmt"
 	"sync/atomic"
 
@@ -40,11 +39,6 @@ func StringID(str string) ID {
 	v := checked.NewBytes([]byte(str), nil)
 	v.IncRef()
 	return &id{data: v}
-}
-
-// HashFn is the default hashing implementation for IDs.
-func HashFn(data []byte) Hash {
-	return md5.Sum(data)
 }
 
 type id struct {

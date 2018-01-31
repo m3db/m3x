@@ -25,6 +25,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/m3db/m3x/resource"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -57,7 +58,7 @@ func TestTracebackReadAfterFree(t *testing.T) {
 		}
 
 		finalized := 0
-		elem.SetFinalizer(FinalizerFn(func() {
+		elem.SetFinalizer(resource.FinalizerFn(func() {
 			finalized++
 		}))
 
@@ -114,7 +115,7 @@ func TestTracebackDoubleWrite(t *testing.T) {
 		}
 
 		finalized := 0
-		elem.SetFinalizer(FinalizerFn(func() {
+		elem.SetFinalizer(resource.FinalizerFn(func() {
 			finalized++
 		}))
 

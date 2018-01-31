@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/m3db/m3x/resource"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -74,7 +75,7 @@ func TestRefCountFinalizeCallsFinalizer(t *testing.T) {
 	elem := &RefCount{}
 
 	finalizerCalls := 0
-	finalizer := Finalizer(FinalizerFn(func() {
+	finalizer := resource.Finalizer(resource.FinalizerFn(func() {
 		finalizerCalls++
 	}))
 	elem.SetFinalizer(finalizer)
@@ -99,10 +100,10 @@ func TestRefCountFinalizeCallsFinalizer(t *testing.T) {
 func TestRefCountFinalizerNil(t *testing.T) {
 	elem := &RefCount{}
 
-	assert.Equal(t, (Finalizer)(nil), elem.Finalizer())
+	assert.Equal(t, (resource.Finalizer)(nil), elem.Finalizer())
 
 	finalizerCalls := 0
-	elem.SetFinalizer(Finalizer(FinalizerFn(func() {
+	elem.SetFinalizer(resource.Finalizer(resource.FinalizerFn(func() {
 		finalizerCalls++
 	})))
 

@@ -55,6 +55,17 @@ func (p *simpleIdentifierPool) GetBinaryID(ctx context.Context, v checked.Bytes)
 	return id
 }
 
+func (p *simpleIdentifierPool) GetBinaryTag(
+	ctx context.Context,
+	name checked.Bytes,
+	value checked.Bytes,
+) Tag {
+	return Tag{
+		Name:  TagName(p.GetBinaryID(ctx, name)),
+		Value: TagValue(p.GetBinaryID(ctx, value)),
+	}
+}
+
 func (p *simpleIdentifierPool) GetStringID(ctx context.Context, v string) ID {
 	data := p.bytesPool.Get(len(v))
 	data.IncRef()
@@ -66,6 +77,18 @@ func (p *simpleIdentifierPool) GetStringID(ctx context.Context, v string) ID {
 func (p *simpleIdentifierPool) Put(v ID) {
 	v.Reset()
 	p.pool.Put(v)
+}
+
+func (p *simpleIdentifierPool) PutTag(t Tag) {
+	p.Put(t.Name)
+	p.Put(t.Value)
+}
+
+func (p *simpleIdentifierPool) GetStringTag(ctx context.Context, name string, value string) Tag {
+	return Tag{
+		Name:  TagName(p.GetStringID(ctx, name)),
+		Value: TagValue(p.GetStringID(ctx, value)),
+	}
 }
 
 func (p *simpleIdentifierPool) Clone(existing ID) ID {
@@ -83,6 +106,15 @@ func (p *simpleIdentifierPool) Clone(existing ID) ID {
 	id.pool, id.data = p, newData
 
 	return id
+}
+
+func (p *simpleIdentifierPool) CloneIDs(iter IDsIterator) IDs {
+	ids := make(IDs, 0, iter.Remaining())
+	for iter.Next() {
+		id := iter.Current()
+		ids = append(ids, p.Clone(id))
+	}
+	return ids
 }
 
 // NewNativeIdentifierPool constructs a new NativeIdentifierPool.
@@ -152,6 +184,18 @@ func (p *nativeIdentifierPool) GetBinaryID(ctx context.Context, v checked.Bytes)
 	return id
 }
 
+// GetBinaryTag returns a new Tag based on binary values.
+func (p *nativeIdentifierPool) GetBinaryTag(
+	ctx context.Context,
+	name checked.Bytes,
+	value checked.Bytes,
+) Tag {
+	return Tag{
+		Name:  TagName(p.GetBinaryID(ctx, name)),
+		Value: TagValue(p.GetBinaryID(ctx, value)),
+	}
+}
+
 // GetStringID returns a new ID based on a string value.
 func (p *nativeIdentifierPool) GetStringID(ctx context.Context, str string) ID {
 	id := p.pool.Get().(*id)
@@ -166,9 +210,22 @@ func (p *nativeIdentifierPool) GetStringID(ctx context.Context, str string) ID {
 	return id
 }
 
+// GetStringTag returns a new Tag based on string values.
+func (p *nativeIdentifierPool) GetStringTag(ctx context.Context, name string, value string) Tag {
+	return Tag{
+		Name:  TagName(p.GetStringID(ctx, name)),
+		Value: TagValue(p.GetStringID(ctx, value)),
+	}
+}
+
 func (p *nativeIdentifierPool) Put(v ID) {
 	v.Reset()
 	p.pool.Put(v.(*id))
+}
+
+func (p *nativeIdentifierPool) PutTag(t Tag) {
+	p.Put(t.Name)
+	p.Put(t.Value)
 }
 
 // Clone replicates given ID into a new ID from the pool.
@@ -187,4 +244,13 @@ func (p *nativeIdentifierPool) Clone(existing ID) ID {
 	id.pool, id.data = p, v
 
 	return id
+}
+
+func (p *nativeIdentifierPool) CloneIDs(iter IDsIterator) IDs {
+	ids := make(IDs, 0, iter.Remaining())
+	for iter.Next() {
+		id := iter.Current()
+		ids = append(ids, p.Clone(id))
+	}
+	return ids
 }

@@ -24,7 +24,6 @@ package ident
 import (
 	"crypto/md5"
 	"fmt"
-	"time"
 
 	"github.com/m3db/m3x/checked"
 	"github.com/m3db/m3x/context"
@@ -78,12 +77,3 @@ func Murmur3Hash128(data []byte) Hash128 {
 	h0, h1 := murmur3.Sum128(data)
 	return Hash128{h0, h1}
 }
-
-// A Datapoint is a single data value reported at a given time.
-type Datapoint struct {
-	Timestamp time.Time
-	Value     float64
-}
-
-// Annotation represents information used to annotate datapoints.
-type Annotation []byte

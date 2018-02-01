@@ -20,13 +20,13 @@
 
 package ident
 
-// NewIDsIterator returns a new IDsIterator over the given IDs.
-func NewIDsIterator(ids ...ID) IDsIterator {
+// NewIDsIterator returns a new Iterator over the given IDs.
+func NewIDsIterator(ids ...ID) Iterator {
 	return NewIDSliceIterator(ids)
 }
 
-// NewIDSliceIterator returns a new IDsIterator over a slice.
-func NewIDSliceIterator(ids []ID) IDsIterator {
+// NewIDSliceIterator returns a new Iterator over a slice.
+func NewIDSliceIterator(ids []ID) Iterator {
 	iter := &idSliceIter{
 		backingSlice: ids,
 		currentIdx:   -1,
@@ -65,13 +65,13 @@ func (i *idSliceIter) Remaining() int {
 	return 0
 }
 
-// NewStringIDsIterator returns a new IDsIterator over the given IDs.
-func NewStringIDsIterator(ids ...string) IDsIterator {
+// NewStringIDsIterator returns a new Iterator over the given IDs.
+func NewStringIDsIterator(ids ...string) Iterator {
 	return NewStringIDsSliceIterator(ids)
 }
 
-// NewStringIDsSliceIterator returns a new IDsIterator over a slice of strings.
-func NewStringIDsSliceIterator(ids []string) IDsIterator {
+// NewStringIDsSliceIterator returns a new Iterator over a slice of strings.
+func NewStringIDsSliceIterator(ids []string) Iterator {
 	iter := &stringSliceIter{
 		backingSlice: ids,
 		currentIdx:   -1,

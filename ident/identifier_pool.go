@@ -108,7 +108,7 @@ func (p *simpleIdentifierPool) Clone(existing ID) ID {
 	return id
 }
 
-func (p *simpleIdentifierPool) CloneIDs(iter IDsIterator) IDs {
+func (p *simpleIdentifierPool) CloneIDs(iter Iterator) IDs {
 	ids := make(IDs, 0, iter.Remaining())
 	for iter.Next() {
 		id := iter.Current()
@@ -246,7 +246,7 @@ func (p *nativeIdentifierPool) Clone(existing ID) ID {
 	return id
 }
 
-func (p *nativeIdentifierPool) CloneIDs(iter IDsIterator) IDs {
+func (p *nativeIdentifierPool) CloneIDs(iter Iterator) IDs {
 	ids := make(IDs, 0, iter.Remaining())
 	for iter.Next() {
 		id := iter.Current()

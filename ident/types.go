@@ -85,11 +85,11 @@ type IdentifierPool interface {
 	Clone(other ID) ID
 
 	// CloneIDs replicates the given IDs into pooled IDs.
-	CloneIDs(IDsIterator) IDs
+	CloneIDs(Iterator) IDs
 }
 
-// IDsIterator represents an iterator over `ID` instances. It is not thread-safe.
-type IDsIterator interface {
+// Iterator represents an iterator over `ID` instances. It is not thread-safe.
+type Iterator interface {
 	// Next returns a bool indicating the presence of the next ID instance.
 	Next() bool
 

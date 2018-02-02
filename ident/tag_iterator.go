@@ -66,16 +66,11 @@ func (i *tagSliceIter) Remaining() int {
 }
 
 // EmptyTagIterator returns an iterator over no tags.
-type EmptyTagIterator struct{}
+var EmptyTagIterator TagIterator = &emptyTagIterator{}
 
-// Next always returns false.
-func (e EmptyTagIterator) Next() bool { return false }
+type emptyTagIterator struct{}
 
-// Current always returns an un-set Tag.
-func (e EmptyTagIterator) Current() Tag { return Tag{} }
-
-// Err always returns nil.
-func (e EmptyTagIterator) Err() error { return nil }
-
-// Remaining always returns 0.
-func (e EmptyTagIterator) Remaining() int { return 0 }
+func (e *emptyTagIterator) Next() bool     { return false }
+func (e *emptyTagIterator) Current() Tag   { return Tag{} }
+func (e *emptyTagIterator) Err() error     { return nil }
+func (e *emptyTagIterator) Remaining() int { return 0 }

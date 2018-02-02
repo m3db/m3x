@@ -103,8 +103,26 @@ type Iterator interface {
 	Remaining() int
 }
 
+// TagIterator represents an iterator over `Tag` instances. It is not thread-safe.
+type TagIterator interface {
+	// Next returns a bool indicating the presence of the next Tag instance.
+	Next() bool
+
+	// Current returns the current Tag instance.
+	Current() Tag
+
+	// Err returns any errors encountered during iteration.
+	Err() error
+
+	// Remaining returns the number of elements remaining to be iterated over.
+	Remaining() int
+}
+
 // IDs is a collection of ID instances.
 type IDs []ID
+
+// Tags is a collection of Tag instances.
+type Tags []Tag
 
 // Hash represents a form of ID suitable to be used as map keys.
 type Hash [md5.Size]byte

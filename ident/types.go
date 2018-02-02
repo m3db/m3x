@@ -55,8 +55,8 @@ type Tag struct {
 	Value TagValue
 }
 
-// IdentifierPool represents an automatic pool of IDs.
-type IdentifierPool interface {
+// Pool represents an automatic pool of `ident` objects.
+type Pool interface {
 	// GetBinaryID will create a new binary ID and take reference to the bytes.
 	// When the context closes the ID will be finalized and so too will
 	// the bytes, i.e. it will take ownership of the bytes.

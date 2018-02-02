@@ -69,7 +69,7 @@ type Pool interface {
 
 	// GetStringID will create a new string ID and create a bytes copy of the
 	// string. When the context closes the ID will be finalized.
-	GetStringID(context.Context, string) ID
+	GetStringID(c context.Context, id string) ID
 
 	// GetStringTag will create a new string Tag and create a bytes copy of the
 	// string. When the context closes the ID will be finalized.

@@ -65,12 +65,21 @@ func (i *tagSliceIter) Remaining() int {
 	return 0
 }
 
+func (i *tagSliceIter) Clone() TagIterator {
+	return &tagSliceIter{
+		backingSlice: i.backingSlice,
+		currentIdx:   i.currentIdx,
+		currentTag:   i.currentTag,
+	}
+}
+
 // EmptyTagIterator returns an iterator over no tags.
 var EmptyTagIterator TagIterator = &emptyTagIterator{}
 
 type emptyTagIterator struct{}
 
-func (e *emptyTagIterator) Next() bool     { return false }
-func (e *emptyTagIterator) Current() Tag   { return Tag{} }
-func (e *emptyTagIterator) Err() error     { return nil }
-func (e *emptyTagIterator) Remaining() int { return 0 }
+func (e *emptyTagIterator) Next() bool         { return false }
+func (e *emptyTagIterator) Current() Tag       { return Tag{} }
+func (e *emptyTagIterator) Err() error         { return nil }
+func (e *emptyTagIterator) Remaining() int     { return 0 }
+func (e *emptyTagIterator) Clone() TagIterator { return e }

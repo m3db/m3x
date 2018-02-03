@@ -65,6 +65,14 @@ func (i *idSliceIter) Remaining() int {
 	return 0
 }
 
+func (i *idSliceIter) Clone() Iterator {
+	return &idSliceIter{
+		backingSlice: i.backingSlice,
+		currentIdx:   i.currentIdx,
+		currentID:    i.currentID,
+	}
+}
+
 // NewStringIDsIterator returns a new Iterator over the given IDs.
 func NewStringIDsIterator(ids ...string) Iterator {
 	return NewStringIDsSliceIterator(ids)
@@ -108,4 +116,12 @@ func (i *stringSliceIter) Remaining() int {
 		return r
 	}
 	return 0
+}
+
+func (i *stringSliceIter) Clone() Iterator {
+	return &stringSliceIter{
+		backingSlice: i.backingSlice,
+		currentIdx:   i.currentIdx,
+		currentID:    i.currentID,
+	}
 }

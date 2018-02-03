@@ -63,6 +63,30 @@ func TestSliceIterator(t *testing.T) {
 	require.Empty(t, expected)
 }
 
+func TestSliceIteratorClone(t *testing.T) {
+	expected := map[string]struct{}{
+		"foo": struct{}{},
+		"bar": struct{}{},
+		"baz": struct{}{},
+	}
+	iter := NewIDSliceIterator(testIDs())
+	clone := iter.Clone()
+	expectedLen := len(expected)
+	require.Equal(t, expectedLen, iter.Remaining())
+	require.Equal(t, expectedLen, clone.Remaining())
+	for iter.Next() {
+		c := iter.Current()
+		if _, ok := expected[c.String()]; ok {
+			delete(expected, c.String())
+			continue
+		}
+		require.Equal(t, len(expected), iter.Remaining())
+		require.Fail(t, "unknown id", c.String())
+	}
+	require.Empty(t, expected)
+	require.Equal(t, expectedLen, clone.Remaining())
+}
+
 func TestStringSliceIterator(t *testing.T) {
 	expected := map[string]struct{}{
 		"foo": struct{}{},
@@ -81,4 +105,27 @@ func TestStringSliceIterator(t *testing.T) {
 		require.Fail(t, "unknown id", c.String())
 	}
 	require.Empty(t, expected)
+}
+func TestStringSliceIteratorClone(t *testing.T) {
+	expected := map[string]struct{}{
+		"foo": struct{}{},
+		"bar": struct{}{},
+		"baz": struct{}{},
+	}
+	iter := NewStringIDsSliceIterator(stringIDs())
+	clone := iter.Clone()
+	expectedLen := len(expected)
+	require.Equal(t, expectedLen, iter.Remaining())
+	require.Equal(t, expectedLen, clone.Remaining())
+	for iter.Next() {
+		c := iter.Current()
+		if _, ok := expected[c.String()]; ok {
+			delete(expected, c.String())
+			continue
+		}
+		require.Equal(t, len(expected), iter.Remaining())
+		require.Fail(t, "unknown id", c.String())
+	}
+	require.Empty(t, expected)
+	require.Equal(t, expectedLen, clone.Remaining())
 }

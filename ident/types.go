@@ -101,6 +101,9 @@ type Iterator interface {
 
 	// Remaining returns the number of elements remaining to be iterated over.
 	Remaining() int
+
+	// Clone returns an independent clone of the iterator.
+	Clone() Iterator
 }
 
 // TagIterator represents an iterator over `Tag` instances. It is not thread-safe.
@@ -116,10 +119,20 @@ type TagIterator interface {
 
 	// Remaining returns the number of elements remaining to be iterated over.
 	Remaining() int
+
+	// Clone returns an independent clone of the iterator.
+	Clone() TagIterator
 }
 
 // IDs is a collection of ID instances.
 type IDs []ID
+
+// Finalize finalizes all IDs.
+func (ids IDs) Finalize() {
+	for _, id := range ids {
+		id.Finalize()
+	}
+}
 
 // Tags is a collection of Tag instances.
 type Tags []Tag

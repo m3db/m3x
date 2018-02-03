@@ -58,6 +58,12 @@ func (i *tagSliceIter) Err() error {
 	return nil
 }
 
+func (i *tagSliceIter) Close() {
+	i.backingSlice = nil
+	i.currentIdx = 0
+	i.currentTag = Tag{}
+}
+
 func (i *tagSliceIter) Remaining() int {
 	if r := len(i.backingSlice) - 1 - i.currentIdx; r >= 0 {
 		return r
@@ -81,5 +87,6 @@ type emptyTagIterator struct{}
 func (e *emptyTagIterator) Next() bool         { return false }
 func (e *emptyTagIterator) Current() Tag       { return Tag{} }
 func (e *emptyTagIterator) Err() error         { return nil }
+func (e *emptyTagIterator) Close()             {}
 func (e *emptyTagIterator) Remaining() int     { return 0 }
 func (e *emptyTagIterator) Clone() TagIterator { return e }

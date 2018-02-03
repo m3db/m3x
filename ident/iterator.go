@@ -58,6 +58,12 @@ func (i *idSliceIter) Err() error {
 	return nil
 }
 
+func (i *idSliceIter) Close() {
+	i.backingSlice = nil
+	i.currentIdx = 0
+	i.currentID = nil
+}
+
 func (i *idSliceIter) Remaining() int {
 	if r := len(i.backingSlice) - 1 - i.currentIdx; r >= 0 {
 		return r
@@ -109,6 +115,12 @@ func (i *stringSliceIter) Current() ID {
 
 func (i *stringSliceIter) Err() error {
 	return nil
+}
+
+func (i *stringSliceIter) Close() {
+	i.backingSlice = nil
+	i.currentIdx = 0
+	i.currentID = nil
 }
 
 func (i *stringSliceIter) Remaining() int {

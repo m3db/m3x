@@ -96,6 +96,9 @@ type Iterator interface {
 	// Current returns the current ID instance.
 	Current() ID
 
+	// Close releases any resources held by the iterator.
+	Close()
+
 	// Err returns any errors encountered during iteration.
 	Err() error
 
@@ -116,6 +119,9 @@ type TagIterator interface {
 
 	// Err returns any errors encountered during iteration.
 	Err() error
+
+	// Close releases any resources held by the iterator.
+	Close()
 
 	// Remaining returns the number of elements remaining to be iterated over.
 	Remaining() int

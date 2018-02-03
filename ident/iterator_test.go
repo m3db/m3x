@@ -43,6 +43,12 @@ func testIDs() []ID {
 	return ids
 }
 
+func TestSliceIteratorEmpty(t *testing.T) {
+	iter := NewIDSliceIterator([]ID{})
+	require.Equal(t, 0, iter.Remaining())
+	require.False(t, iter.Next())
+}
+
 func TestSliceIterator(t *testing.T) {
 	expected := map[string]struct{}{
 		"foo": struct{}{},

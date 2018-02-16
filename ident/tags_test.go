@@ -39,7 +39,7 @@ func TestTagsUnequalLength(t *testing.T) {
 	require.False(t, tagsB.Equal(tagsA))
 }
 
-func TestTagsInequalOrder(t *testing.T) {
+func TestTagsUnequalOrder(t *testing.T) {
 	tagsA := Tags{
 		StringTag("foo", "bar"),
 		StringTag("hello", "there"),

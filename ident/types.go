@@ -151,7 +151,8 @@ func (tags Tags) Finalize() {
 	}
 }
 
-// Equal returns a bool indicating if the tags are equal.
+// Equal returns a bool indicating if the tags are equal. It requires
+// the two slices are ordered the same.
 func (tags Tags) Equal(other Tags) bool {
 	if len(tags) != len(other) {
 		return false

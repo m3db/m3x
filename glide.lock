@@ -1,5 +1,5 @@
-hash: 6f151f7ea402727e6523af35873984b981f89f17359cb5c9c908d5bf8a080317
-updated: 2017-11-10T18:57:40.920349734-08:00
+hash: fa245ea85afb21dc41ecd7a011509450668371ca1a1964c9eea7da90558deca8
+updated: 2018-02-26T13:21:14.255299-05:00
 imports:
 - name: github.com/apache/thrift
   version: 9549b25c77587b29be4e0b5c258221a4ed85d37a
@@ -14,7 +14,7 @@ imports:
   subpackages:
   - oleutil
 - name: github.com/golang/mock
-  version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
+  version: 13f360950a79f5864a972c786a10a50e44b69541
   subpackages:
   - gomock
 - name: github.com/shirou/gopsutil
@@ -40,7 +40,7 @@ imports:
 - name: github.com/uber-go/atomic
   version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
 - name: github.com/uber-go/tally
-  version: 95078a8f10668bd1fa73ae46761cdc58d25436b8
+  version: 522328b48efad0c6034dba92bf39228694e9d31f
   subpackages:
   - m3
   - m3/customtransports
@@ -49,7 +49,7 @@ imports:
 - name: github.com/uber-go/zap
   version: 35aad584952c3e7020db7b839f6b102de6271f89
 - name: go.uber.org/atomic
-  version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
+  version: 8474b86a5a6f79c443ce4b2992817ff32cf208b8
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/zap

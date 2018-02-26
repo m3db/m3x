@@ -37,9 +37,6 @@ import:
 - package: github.com/StackExchange/wmi
   version: ^1.0.0
 
-- package: github.com/fortytw2/leaktest
-  version: ^1.1.0
-
 - package: github.com/spaolacci/murmur3
   version: ^1.1.0
 
@@ -49,5 +46,9 @@ testImport:
   subpackages:
   - assert
   - require
+
 - package: github.com/davecgh/go-spew
   version: ^1.0.0
+
+- package: github.com/fortytw2/leaktest
+  version: ^1.1.0

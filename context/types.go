@@ -71,6 +71,7 @@ type Pool interface {
 	Put(Context)
 }
 
+// Options controls knobs for context pooling.
 type Options interface {
 	// SetContextPoolOptions sets the context pool options.
 	SetContextPoolOptions(pool.ObjectPoolOptions) Options

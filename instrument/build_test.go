@@ -22,6 +22,7 @@ package instrument
 
 import (
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -121,8 +122,7 @@ func TestAgeReported(t *testing.T) {
 func TestAgeReportedIsCorrect(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	BuildDateUnixNanos = time.Now().Add(-24 * time.Hour).UnixNano()
-
+	atomic.StoreInt64(&BuildTimeUnixNanos, time.Now().Add(-24*time.Hour).UnixNano())
 	opts := newTestOptions()
 	rep := NewBuildReporter(opts)
 	require.NoError(t, rep.Start())

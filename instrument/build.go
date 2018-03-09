@@ -25,6 +25,7 @@ import (
 	"log"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -41,8 +42,8 @@ var (
 	// BuildDate is the date this build was created.
 	BuildDate = "unknown"
 
-	// BuildDateUnixNanos is the UnixNanos since epoch representing the date this build was created.
-	BuildDateUnixNanos int64 = 0
+	// BuildTimeUnixNanos is the UnixNanos since epoch representing the date this build was created.
+	BuildTimeUnixNanos int64
 
 	// LogBuildInfoAtStartup controls whether we log build information at startup. If its
 	// set to a non-empty string, we log the build information at process startup.
@@ -69,7 +70,7 @@ func LogBuildInfo() {
 	log.Printf("Build Revision:      %s\n", Revision)
 	log.Printf("Build Branch:        %s\n", Branch)
 	log.Printf("Build Date:          %s\n", BuildDate)
-	log.Printf("Build DateUnixNanos: %s\n", BuildDateUnixNanos)
+	log.Printf("Build TimeUnixNanos: %d\n", BuildTimeUnixNanos)
 }
 
 func init() {
@@ -110,7 +111,9 @@ func (b *buildReporter) Start() error {
 }
 
 func (b *buildReporter) report() {
-	buildTime := time.Unix(0, BuildDateUnixNanos)
+	// NB(prateek): This value is only ever set during the compilation phase using ld-flags,
+	// but we still need the atomic.LoadInt64 to ensure the tests are not racy.
+	buildTime := time.Unix(0, atomic.LoadInt64(&BuildTimeUnixNanos))
 	scope := b.opts.MetricsScope().Tagged(map[string]string{
 		"revision":   Revision,
 		"branch":     Branch,

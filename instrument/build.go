@@ -41,6 +41,9 @@ var (
 	// BuildDate is the date this build was created.
 	BuildDate = "unknown"
 
+	// BuildDateUnixNanos is the UnixNanos since epoch representing the date this build was created.
+	BuildDateUnixNanos int64 = 0
+
 	// LogBuildInfoAtStartup controls whether we log build information at startup. If its
 	// set to a non-empty string, we log the build information at process startup.
 	LogBuildInfoAtStartup string
@@ -48,8 +51,11 @@ var (
 	// goVersion is the current runtime version.
 	goVersion = runtime.Version()
 
-	// metricName is the emitted metric's name.
-	metricName = "build-information"
+	// buildInfoMetricName is the emitted build information metric's name.
+	buildInfoMetricName = "build-information"
+
+	// buildAgeMetricName is the emitted build age metric's name.
+	buildAgeMetricName = "build-age"
 )
 
 var (
@@ -59,10 +65,11 @@ var (
 
 // LogBuildInfo logs the build information to the provided logger.
 func LogBuildInfo() {
-	log.Printf("Go Runtime version: %s\n", goVersion)
-	log.Printf("Build Revision:     %s\n", Revision)
-	log.Printf("Build Branch:       %s\n", Branch)
-	log.Printf("Build Date:         %s\n", BuildDate)
+	log.Printf("Go Runtime version:  %s\n", goVersion)
+	log.Printf("Build Revision:      %s\n", Revision)
+	log.Printf("Build Branch:        %s\n", Branch)
+	log.Printf("Build Date:          %s\n", BuildDate)
+	log.Printf("Build DateUnixNanos: %s\n", BuildDateUnixNanos)
 }
 
 func init() {
@@ -103,14 +110,17 @@ func (b *buildReporter) Start() error {
 }
 
 func (b *buildReporter) report() {
+	buildTime := time.Unix(0, BuildDateUnixNanos)
 	scope := b.opts.MetricsScope().Tagged(map[string]string{
 		"revision":   Revision,
 		"branch":     Branch,
 		"build-date": BuildDate,
 		"go-version": goVersion,
 	})
-	gauge := scope.Gauge(metricName)
-	gauge.Update(1.0)
+	buildInfoGauge := scope.Gauge(buildInfoMetricName)
+	buildAgeGauge := scope.Gauge(buildAgeMetricName)
+	buildInfoGauge.Update(1.0)
+	buildAgeGauge.Update(float64(time.Since(buildTime)))
 
 	ticker := time.NewTicker(b.opts.ReportInterval())
 	defer func() {
@@ -121,7 +131,9 @@ func (b *buildReporter) report() {
 	for {
 		select {
 		case <-ticker.C:
-			gauge.Update(1.0)
+			buildInfoGauge.Update(1.0)
+			buildAgeGauge.Update(float64(time.Since(buildTime)))
+
 		case <-b.closeCh:
 			return
 		}

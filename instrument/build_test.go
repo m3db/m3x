@@ -86,12 +86,63 @@ func TestVersionReported(t *testing.T) {
 	for notFound {
 		snapshot := testScope.Snapshot().Gauges()
 		for key := range snapshot {
-			if strings.Contains(key, metricName) {
+			if strings.Contains(key, buildInfoMetricName) {
 				notFound = false
 				break
 			}
 		}
 	}
+
+	require.NoError(t, rep.Stop())
+}
+
+func TestAgeReported(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	opts := newTestOptions()
+	rep := NewBuildReporter(opts)
+	require.NoError(t, rep.Start())
+
+	testScope := opts.MetricsScope().(tally.TestScope)
+	notFound := true
+	for notFound {
+		snapshot := testScope.Snapshot().Gauges()
+		for key := range snapshot {
+			if strings.Contains(key, buildAgeMetricName) {
+				notFound = false
+				break
+			}
+		}
+	}
+
+	require.NoError(t, rep.Stop())
+}
+
+func TestAgeReportedIsCorrect(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	BuildDateUnixNanos = time.Now().Add(-24 * time.Hour).UnixNano()
+
+	opts := newTestOptions()
+	rep := NewBuildReporter(opts)
+	require.NoError(t, rep.Start())
+
+	testScope := opts.MetricsScope().(tally.TestScope)
+	notFound := true
+	age := float64(0.0)
+	for notFound {
+		snapshot := testScope.Snapshot().Gauges()
+		for key, value := range snapshot {
+			if strings.Contains(key, buildAgeMetricName) {
+				age = value.Value()
+				notFound = false
+				break
+			}
+		}
+	}
+
+	dayInNanos := float64(24 * time.Hour / time.Nanosecond)
+	require.True(t, age >= dayInNanos)
 
 	require.NoError(t, rep.Stop())
 }

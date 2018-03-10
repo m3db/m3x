@@ -100,7 +100,7 @@ func NewBuildReporter(
 }
 
 func (b *buildReporter) Start() error {
-	var (
+	const (
 		base    = 10
 		bitSize = 64
 	)

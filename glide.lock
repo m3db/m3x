@@ -1,10 +1,12 @@
-hash: ebf46c3e660b0e714f901cdfff17997d36f49ca6ff313b452c21301083045e66
-updated: 2018-03-19T18:28:13.939884-04:00
+hash: c0e6fe891694829574bcf763609de4a5d2a0b97db664de6eba6e000688796adc
+updated: 2018-03-21T19:26:02.468121-04:00
 imports:
 - name: github.com/apache/thrift
   version: 9549b25c77587b29be4e0b5c258221a4ed85d37a
   subpackages:
   - lib/go/thrift
+- name: github.com/cheekybits/genny
+  version: 9127e812e1e9e501ce899a18121d316ecb52e4ba
 - name: github.com/facebookgo/clock
   version: 600d898af40aa09a7a93ecb9265d87b0504b6f03
 - name: github.com/golang/mock
@@ -56,3 +58,4 @@ testImports:
   subpackages:
   - assert
   - require
+  - suite

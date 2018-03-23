@@ -21,7 +21,9 @@
 package ident
 
 import (
-	"github.com/m3db/m3x/checked"
+	"bytes"
+
+	"github.com/m3db/m3x/pool"
 
 	"github.com/cheekybits/genny/generic"
 )
@@ -53,9 +55,20 @@ type Map struct {
 	// maps with uint64 keys has a fast path for Go.
 	lookup map[MapHash]MapEntry
 
-	hash func(ID) MapHash
+	hash func(MapKey) MapHash
 
 	opts MapOptions
+}
+
+// Bytes implements MapKey, BytesMapKey is a simple implementation
+// of an identifier that can be used with the identifier map.
+func (k BytesMapKey) Bytes() []byte {
+	return k
+}
+
+// Finalize implements MapKey, BytesMapKey is a simple implementation
+// of an identifier that can be used with the identifier map.
+func (k BytesMapKey) Finalize() {
 }
 
 // MapHash is the hash for a given map entry, this is public to support
@@ -72,13 +85,19 @@ type MapEntry struct {
 }
 
 type mapKey struct {
-	id       ID
+	id       MapKey
+	fromPool bool
 	finalize bool
 }
 
 // Key returns the map entry key.
-func (e MapEntry) Key() ID {
+func (e MapEntry) Key() MapKey {
 	return e.key.id
+}
+
+// KeyString returns the map entry key as a string.
+func (e MapEntry) KeyString() string {
+	return string(e.key.id.Bytes())
 }
 
 // Value returns the map entry value.
@@ -92,7 +111,7 @@ type MapOptions struct {
 	Size int64
 	// Pool is an underlying pool to use when taking copies of the ID
 	// when using the default Set semantics.
-	Pool Pool
+	Pool pool.BytesPool
 }
 
 // NewMap returns a new identifier map.
@@ -112,19 +131,40 @@ func NewMap(opts MapOptions) *Map {
 	}
 }
 
-func (m *Map) copyKey(key ID) ID {
-	if m.opts.Pool == nil {
-		bytes := append([]byte(nil), key.Data().Get()...)
-		return BinaryID(checked.NewBytes(bytes, nil))
+func (m *Map) newMapKey(id MapKey, opts mapKeyOptions) mapKey {
+	key := mapKey{id: id, finalize: opts.finalizeKey}
+	if !opts.copyKey {
+		return key
 	}
-	return m.opts.Pool.Clone(key)
+
+	bytes := id.Bytes()
+	if m.opts.Pool == nil {
+		key.id = BytesMapKey(append([]byte(nil), bytes...))
+		return key
+	}
+
+	keyLen := len(bytes)
+	result := m.opts.Pool.Get(keyLen)[:keyLen]
+	copy(result, bytes)
+
+	key.fromPool = true
+	key.id = BytesMapKey(result)
+	return key
+}
+
+func (m *Map) releaseMapKey(key mapKey) {
+	if key.fromPool {
+		m.opts.Pool.Put(key.id.Bytes())
+	} else if key.finalize {
+		key.id.Finalize()
+	}
 }
 
 // Get returns a value in the map for an identifier if found.
-func (m *Map) Get(id ID) (ValueType, bool) {
+func (m *Map) Get(id MapKey) (ValueType, bool) {
 	hash := m.hash(id)
 	for v, ok := m.lookup[hash]; ok; v, ok = m.lookup[hash] {
-		if v.key.id.Equal(id) {
+		if bytes.Equal(v.key.id.Bytes(), id.Bytes()) {
 			return v.value, true
 		}
 		// Linear probe to "next" to this entry (really a rehash)
@@ -135,31 +175,43 @@ func (m *Map) Get(id ID) (ValueType, bool) {
 }
 
 // Set will set the value for an identifier.
-func (m *Map) Set(id ID, value ValueType) {
-	m.set(id, value, mapSetOptions{
-		copyKey:     true,
+func (m *Map) Set(id MapKey, value ValueType) {
+	m.set(id, value, mapKeyOptions{
+		copyKey: true,
+		// NB(r): Only finalize the key if we're not creating copy from
+		// internal pool, otherwise we explicitly return it to the pool
+		// instead of finalizing it.
+		finalizeKey: m.opts.Pool == nil,
+	})
+}
+
+// SetNoCopyKey will set the value for an identifier but will
+// avoid copying the identifier, it will finalize the key if/when evicted.
+func (m *Map) SetNoCopyKey(id MapKey, value ValueType) {
+	m.set(id, value, mapKeyOptions{
+		copyKey:     false,
 		finalizeKey: true,
 	})
 }
 
 // SetNoCopyNoFinalizeKey will set the value for an identifier but will
 // avoid copying the identifier and will not finalize the key if/when evicted.
-func (m *Map) SetNoCopyNoFinalizeKey(id ID, value ValueType) {
-	m.set(id, value, mapSetOptions{
+func (m *Map) SetNoCopyNoFinalizeKey(id MapKey, value ValueType) {
+	m.set(id, value, mapKeyOptions{
 		copyKey:     false,
 		finalizeKey: false,
 	})
 }
 
-type mapSetOptions struct {
+type mapKeyOptions struct {
 	copyKey     bool
 	finalizeKey bool
 }
 
-func (m *Map) set(id ID, value ValueType, opts mapSetOptions) {
+func (m *Map) set(id MapKey, value ValueType, opts mapKeyOptions) {
 	hash := m.hash(id)
 	for v, ok := m.lookup[hash]; ok; v, ok = m.lookup[hash] {
-		if v.key.id.Equal(id) {
+		if bytes.Equal(v.key.id.Bytes(), id.Bytes()) {
 			m.lookup[hash] = MapEntry{
 				key:   v.key,
 				value: value,
@@ -170,18 +222,7 @@ func (m *Map) set(id ID, value ValueType, opts mapSetOptions) {
 		hash++
 	}
 
-	var keyID ID
-	if opts.copyKey {
-		keyID = m.copyKey(id)
-	} else {
-		keyID = id
-	}
-
-	key := mapKey{
-		id:       keyID,
-		finalize: opts.finalizeKey,
-	}
-
+	key := m.newMapKey(id, opts)
 	m.lookup[hash] = MapEntry{
 		key:   key,
 		value: value,
@@ -202,20 +243,18 @@ func (m *Map) Len() int {
 
 // Has returns true if value exists for key, false otherwise, it is
 // shorthand for a call to Get that doesn't return the value.
-func (m *Map) Has(id ID) bool {
+func (m *Map) Has(id MapKey) bool {
 	_, ok := m.Get(id)
 	return ok
 }
 
 // Delete will remove a value set in the map for the specified key.
-func (m *Map) Delete(id ID) {
+func (m *Map) Delete(id MapKey) {
 	hash := m.hash(id)
 	for v, ok := m.lookup[hash]; ok; v, ok = m.lookup[hash] {
-		if v.key.id.Equal(id) {
+		if bytes.Equal(v.key.id.Bytes(), id.Bytes()) {
 			delete(m.lookup, hash)
-			if v.key.finalize {
-				v.key.id.Finalize()
-			}
+			m.releaseMapKey(v.key)
 			return
 		}
 		// Linear probe to "next" to this entry (really a rehash)
@@ -228,9 +267,7 @@ func (m *Map) Delete(id ID) {
 func (m *Map) Reset() {
 	for hash, v := range m.lookup {
 		delete(m.lookup, hash)
-		if v.key.finalize {
-			v.key.id.Finalize()
-		}
+		m.releaseMapKey(v.key)
 	}
 }
 
@@ -246,9 +283,9 @@ func (m *Map) ResetByReallocateMap() {
 }
 
 // inline alloc-free fnv-1a hash
-func hashFnv(key ID) MapHash {
+func hashFnv(key MapKey) MapHash {
 	var v MapHash = offset64
-	for _, c := range key.Data().Get() {
+	for _, c := range key.Bytes() {
 		v ^= MapHash(c)
 		v *= prime64
 	}

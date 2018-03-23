@@ -21,8 +21,6 @@
 package ident
 
 import (
-	"crypto/md5"
-	"sync"
 	"testing"
 
 	"github.com/m3db/m3x/checked"
@@ -41,46 +39,7 @@ func TestConstructorEquality(t *testing.T) {
 
 	assert.True(t, a.Equal(b))
 	assert.Equal(t, a.String(), b.String())
-	assert.Equal(t, a.Data().Get(), b.Data().Get())
-	assert.Equal(t, a.Hash(), b.Hash())
-}
-
-func TestHashing(t *testing.T) {
-	var (
-		wg         sync.WaitGroup
-		id         = StringID("abc")
-		expected   = Hash(md5.Sum(id.Data().Get()))
-		numWorkers = 100
-	)
-
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			require.Equal(t, expected, id.Hash())
-		}()
-	}
-
-	wg.Wait()
-}
-
-func BenchmarkHashing(b *testing.B) {
-	v := checked.NewBytes([]byte{}, nil)
-
-	for i := 0; i < b.N; i++ {
-		id := BinaryID(v)
-		id.Hash()
-	}
-}
-
-func BenchmarkHashCaching(b *testing.B) {
-	v := checked.NewBytes([]byte{}, nil)
-
-	for i := 0; i < b.N; i++ {
-		id := BinaryID(v)
-		id.Hash()
-		id.Hash()
-	}
+	assert.Equal(t, a.Bytes(), b.Bytes())
 }
 
 func BenchmarkPooling(b *testing.B) {
@@ -91,7 +50,6 @@ func BenchmarkPooling(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		id := p.GetBinaryID(ctx, v)
-		id.Hash()
 		id.Finalize()
 	}
 }

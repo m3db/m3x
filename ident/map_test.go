@@ -22,7 +22,11 @@ package ident
 
 import (
 	"testing"
+	"unsafe"
 
+	"github.com/golang/mock/gomock"
+
+	"github.com/m3db/m3x/pool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -98,7 +102,7 @@ func TestMapIter(t *testing.T) {
 	iterated := 0
 	for _, entry := range m.Iter() {
 		iterated++
-		require.Equal(t, strMap[entry.Key().String()], entry.Value().(string))
+		require.Equal(t, strMap[entry.KeyString()], entry.Value().(string))
 	}
 	require.Equal(t, len(strMap), iterated)
 }
@@ -106,14 +110,14 @@ func TestMapIter(t *testing.T) {
 func TestMapCollision(t *testing.T) {
 	m := NewMap(MapOptions{})
 	// Always collide
-	m.hash = func(_ ID) MapHash { return 0 }
+	m.hash = func(_ MapKey) MapHash { return 0 }
 
 	// Insert foo, ensure set at fake hash
 	m.Set(StringID("foo"), "a")
 
 	v, ok := m.lookup[0]
 	assert.True(t, ok)
-	assert.Equal(t, "foo", v.key.id.String())
+	assert.Equal(t, "foo", v.KeyString())
 	assert.Equal(t, "a", v.value.(string))
 
 	// Insert bar, ensure collides and both next to each other
@@ -121,12 +125,12 @@ func TestMapCollision(t *testing.T) {
 
 	v, ok = m.lookup[0]
 	assert.True(t, ok)
-	assert.Equal(t, "foo", v.key.id.String())
+	assert.Equal(t, "foo", v.KeyString())
 	assert.Equal(t, "a", v.value.(string))
 
 	v, ok = m.lookup[1]
 	assert.True(t, ok)
-	assert.Equal(t, "bar", v.key.id.String())
+	assert.Equal(t, "bar", v.KeyString())
 	assert.Equal(t, "b", v.value.(string))
 
 	// Ensure set for the colliding key works
@@ -134,11 +138,57 @@ func TestMapCollision(t *testing.T) {
 
 	v, ok = m.lookup[0]
 	assert.True(t, ok)
-	assert.Equal(t, "foo", v.key.id.String())
+	assert.Equal(t, "foo", v.KeyString())
 	assert.Equal(t, "a", v.value.(string))
 
 	v, ok = m.lookup[1]
 	assert.True(t, ok)
-	assert.Equal(t, "bar", v.key.id.String())
+	assert.Equal(t, "bar", v.KeyString())
 	assert.Equal(t, "c", v.value.(string))
+}
+
+func TestMapWithSize(t *testing.T) {
+	m := NewMap(MapOptions{Size: 42})
+	m.Set(StringID("foo"), "bar")
+	v, ok := m.Get(StringID("foo"))
+	require.True(t, ok)
+	require.Equal(t, "bar", v.(string))
+}
+
+func TestMapWithPooling(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	key := BytesMapKey([]byte("foo"))
+	value := ValueType("a")
+
+	pool := pool.NewMockBytesPool(ctrl)
+
+	m := NewMap(MapOptions{Pool: pool})
+
+	mockPooledSlice := make([]byte, 0, 3)
+	pool.EXPECT().Get(len(key.Bytes())).Return(mockPooledSlice)
+	m.Set(key, value)
+	require.Equal(t, 1, m.Len())
+
+	// Now ensure that the key is from the pool and not our original key
+	for _, entry := range m.Iter() {
+		type slice struct {
+			array unsafe.Pointer
+			len   int
+			cap   int
+		}
+
+		keyBytes := entry.Key().Bytes()
+
+		rawPooledSlice := (*slice)(unsafe.Pointer(&mockPooledSlice))
+		rawKeySlice := (*slice)(unsafe.Pointer(&keyBytes))
+
+		require.True(t, rawPooledSlice.array == rawKeySlice.array)
+	}
+
+	// Now delete the key to simulate returning to pool
+	pool.EXPECT().Put(mockPooledSlice[:3])
+	m.Delete(key)
+	require.Equal(t, 0, m.Len())
 }

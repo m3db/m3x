@@ -89,6 +89,24 @@ mock-gen: install-mockgen install-license-bin install-util-mockclean
 	@echo Generating mocks
 	PACKAGE=$(m3x_package) $(auto_gen) $(mocks_output_dir) $(mocks_rules_dir)
 
+.PHONY: install-genny
+install-genny:
+	@which genny >/dev/null || (go get -u github.com/cheekybits/genny && go install github.com/cheekybits/genny)
+
+.PHONY: hashmap
+hashmap: install-genny
+	@cd generics/hashmap && genny -in ./map.go -pkg $(pkg) gen "KeyType=$(key_type) ValueType=$(value_type)" > "$(dir $(out_dir))/map.go"
+
+.PHONY: idhashmap
+idhashmap: install-genny
+	@cd generics/hashmap/idkey && genny -in ./map.go -pkg $(pkg) gen "ValueType=$(value_type)" > "$(dir $(out_dir))/map.go"
+	@cd generics/hashmap/idkey && genny -in ./new_map.go -pkg $(pkg) gen "ValueType=$(value_type)" > "$(dir $(out_dir))/new_map.go"
+
+.PHONY: byteshashmap
+byteshashmap: install-genny
+	@cd generics/hashmap/byteskey && genny -in ./map.go -pkg $(pkg) gen "ValueType=$(value_type)" > "$(dir $(out_dir))/map.go"
+	@cd generics/hashmap/byteskey && genny -in ./new_map.go -pkg $(pkg) gen "ValueType=$(value_type)" > "$(dir $(out_dir))/new_map.go"
+
 .PHONY: clean
 clean:
 	@rm -f *.html *.xml *.out *.test

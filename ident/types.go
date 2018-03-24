@@ -28,38 +28,16 @@ import (
 	"github.com/m3db/m3x/context"
 )
 
-// MapKey requires the minimum interface required for the key to be used
-// with the identifier map, this allows for a both the ID type and a native
-// byte slice to be used as an identifier map key.
-type MapKey interface {
-	// Bytes directly returns the underlying bytes of an ID, it is not safe
-	// to hold a reference to this slice and is only valid during the lifetime
-	// of the the ID itself.
-	Bytes() []byte
-
-	// Finalize will return any resources used by the map key.
-	Finalize()
-}
-
-// BytesMapKey is a simple implementation of an identifier that can be used
-// with the identifier map.
-type BytesMapKey []byte
-
-// Noop var declaration to ensure that BytesMapKey implements MapKey.
-var _ MapKey = BytesMapKey(nil)
-
-// Noop var declaration to ensure that checked.Bytes implements MapKey.
-var _ MapKey = checked.Bytes(nil)
-
 // ID represents an immutable identifier to allow use of byte slice pooling
 // for the contents of the ID.
 type ID interface {
-	MapKey
 	fmt.Stringer
 
 	Data() checked.Bytes
+	Bytes() []byte
 	Equal(value ID) bool
 	Reset()
+	Finalize()
 }
 
 // TagName represents the name of a timeseries tag.

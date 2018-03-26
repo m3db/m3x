@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// nolint: structcheck
 func TestMapWithPooling(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

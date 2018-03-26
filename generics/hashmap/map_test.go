@@ -33,7 +33,7 @@ import (
 // the map that is intended to be used with strings, this is useful for testing
 // the non-generated generic map source code.
 func newTestStringMap(size int) *Map {
-	return newMap(mapPrototype{
+	return newMap(mapOptions{
 		HashFn: func(key KeyType) MapHash {
 			return MapHash(fnv.Hash64a([]byte(key.(string))))
 		},
@@ -47,7 +47,6 @@ func newTestStringMap(size int) *Map {
 		FinalizeFn: func(k KeyType) {
 			// No-op, not pooling
 		},
-	}, MapOptions{
 		Size: size,
 	})
 }
@@ -159,7 +158,7 @@ func TestMapIter(t *testing.T) {
 func TestMapCollision(t *testing.T) {
 	m := newTestStringMap(0)
 	// Always collide
-	m.opts.HashFn = func(_ KeyType) MapHash { return 0 }
+	m.HashFn = func(_ KeyType) MapHash { return 0 }
 
 	// Insert foo, ensure set at fake hash
 	m.Set("foo", "a")
@@ -222,11 +221,11 @@ func TestMapWithSize(t *testing.T) {
 	require.Equal(t, "bar", v.(string))
 }
 
-func TestMapSetNoCopyKey(t *testing.T) {
+func TestMapSetUnsafeNoCopyKey(t *testing.T) {
 	m := newTestStringMap(0)
 
 	copies := 0
-	m.opts.CopyFn = func(k KeyType) KeyType {
+	m.CopyFn = func(k KeyType) KeyType {
 		copies++
 		return k
 	}
@@ -235,7 +234,7 @@ func TestMapSetNoCopyKey(t *testing.T) {
 	m.Set("bar", "b")
 	assert.Equal(t, 2, copies)
 
-	m.SetNoCopyKey("baz", "c")
+	m.SetUnsafe("baz", "c", SetUnsafeOptions{NoCopyKey: true})
 	assert.Equal(t, 2, copies)
 }
 
@@ -243,13 +242,13 @@ func TestMapSetNoCopyNoFinalizeKey(t *testing.T) {
 	m := newTestStringMap(0)
 
 	copies := 0
-	m.opts.CopyFn = func(k KeyType) KeyType {
+	m.CopyFn = func(k KeyType) KeyType {
 		copies++
 		return k
 	}
 
 	finalizes := 0
-	m.opts.FinalizeFn = func(k KeyType) {
+	m.FinalizeFn = func(k KeyType) {
 		finalizes++
 	}
 
@@ -261,7 +260,7 @@ func TestMapSetNoCopyNoFinalizeKey(t *testing.T) {
 	m.Delete("bar")
 	assert.Equal(t, 2, finalizes)
 
-	m.SetNoCopyNoFinalizeKey("baz", "c")
+	m.SetUnsafe("baz", "c", SetUnsafeOptions{NoCopyKey: true, NoFinalizeKey: true})
 	assert.Equal(t, 2, copies)
 	assert.Equal(t, 2, finalizes)
 }

@@ -164,21 +164,19 @@ func (m *Map) Set(k KeyType, v ValueType) {
 	})
 }
 
-// SetNoCopyKey will set the value for an identifier but will
-// avoid copying the identifier, it will finalize the key if/when evicted.
-func (m *Map) SetNoCopyKey(k KeyType, v ValueType) {
-	m.set(k, v, mapKeyOptions{
-		copyKey:     false,
-		finalizeKey: true,
-	})
+// SetUnsafeOptions is a set of options to use when setting a value with
+// the SetUnsafe method.
+type SetUnsafeOptions struct {
+	NoCopyKey     bool
+	NoFinalizeKey bool
 }
 
-// SetNoCopyNoFinalizeKey will set the value for an identifier but will
-// avoid copying the identifier and will not finalize the key if/when evicted.
-func (m *Map) SetNoCopyNoFinalizeKey(k KeyType, v ValueType) {
+// SetUnsafe will set the value for an identifier with unsafe options for how
+// the map treats the key.
+func (m *Map) SetUnsafe(k KeyType, v ValueType, opts SetUnsafeOptions) {
 	m.set(k, v, mapKeyOptions{
-		copyKey:     false,
-		finalizeKey: false,
+		copyKey:     !opts.NoCopyKey,
+		finalizeKey: !opts.NoFinalizeKey,
 	})
 }
 

@@ -119,6 +119,7 @@ func (e MapEntry) Value() ValueType {
 // for the map you can supply a public constructor that sets the correct
 // hash, equals, copy, finalize options without users of the map needing to
 // implement them themselves.
+// nolint: deadcode
 func newMap(opts mapOptions) *Map {
 	m := &Map{mapOptions: opts}
 	m.Reallocate()

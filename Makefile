@@ -95,17 +95,17 @@ install-genny:
 
 .PHONY: hashmap
 hashmap: install-genny
-	@cd generics/hashmap && genny -in ./map.go -pkg $(pkg) gen "KeyType=$(key_type) ValueType=$(value_type)" > "$(dir $(out_dir))/map.go"
+	@cd generics/hashmap && cat ./map.go | grep -v nolint | genny -pkg $(pkg) gen "KeyType=$(key_type) ValueType=$(value_type)" > "$(out_dir:\=)/map.go"
 
 .PHONY: idhashmap
 idhashmap: install-genny
-	@cd generics/hashmap/idkey && genny -in ./map.go -pkg $(pkg) gen "ValueType=$(value_type)" > "$(dir $(out_dir))/map.go"
-	@cd generics/hashmap/idkey && genny -in ./new_map.go -pkg $(pkg) gen "ValueType=$(value_type)" > "$(dir $(out_dir))/new_map.go"
+	@cd generics/hashmap/idkey && cat ./map.go | grep -v nolint | genny -pkg $(pkg) gen "ValueType=$(value_type)" > "$(out_dir:\=)/map.go"
+	@cd generics/hashmap/idkey && cat ./new_map.go | grep -v nolint | genny -pkg $(pkg) gen "ValueType=$(value_type)" > "$(out_dir:\=)/new_map.go"
 
 .PHONY: byteshashmap
 byteshashmap: install-genny
-	@cd generics/hashmap/byteskey && genny -in ./map.go -pkg $(pkg) gen "ValueType=$(value_type)" > "$(dir $(out_dir))/map.go"
-	@cd generics/hashmap/byteskey && genny -in ./new_map.go -pkg $(pkg) gen "ValueType=$(value_type)" > "$(dir $(out_dir))/new_map.go"
+	@cd generics/hashmap/byteskey && cat ./map.go | grep -v nolint | genny -pkg $(pkg) gen "ValueType=$(value_type)" > "$(out_dir:\=)/map.go"
+	@cd generics/hashmap/byteskey && cat ./new_map.go | grep -v nolint | genny -pkg $(pkg) gen "ValueType=$(value_type)" > "$(out_dir:\=)/new_map.go"
 
 .PHONY: clean
 clean:

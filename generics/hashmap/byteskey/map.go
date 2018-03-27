@@ -43,7 +43,13 @@ type FinalizeFn func([]byte)
 // Map uses the genny package to provide a generic hash map that can be specialized
 // by running the following command from this root of the repository:
 // ```
-// make hashmap key_type=Your[]byte value_type=YourValue
+// make hashmap-gen pkg=outpkg key_type=Type value_type=Type out_dir=/tmp
+// ```
+// Or if you would like to use bytes or ident.ID as keys you can use the
+// partially specialized maps to generate your own maps as well:
+// ```
+// make byteshashmap-gen pkg=outpkg value_type=Type out_dir=/tmp
+// make idhashmap-gen pkg=outpkg value_type=Type out_dir=/tmp
 // ```
 // This will output to stdout the generated source file to use for your map.
 // It uses linear probing by incrementing the number of the hash created when
@@ -65,18 +71,18 @@ type Map struct {
 // private so that implementers of the generated map can specify their own options
 // that partially fulfill these options.
 type mapOptions struct {
-	// HashFn is the hash function to execute when hashing a key.
-	HashFn HashFn
-	// EqualsFn is the equals key function to execute when detecting equality.
-	EqualsFn EqualsFn
-	// CopyFn is the copy key function to execute when copying the key.
-	CopyFn CopyFn
-	// FinalizeFn is the finalize key function to execute when finished with a
+	// hash is the hash function to execute when hashing a key.
+	hash HashFn
+	// equals is the equals key function to execute when detecting equality.
+	equals EqualsFn
+	// copy is the copy key function to execute when copying the key.
+	copy CopyFn
+	// finalize is the finalize key function to execute when finished with a
 	// key, this is optional to specify.
-	FinalizeFn FinalizeFn
-	// Size is the initial size for the map, use zero to use Go map initial size
-	// and consequently is optional to specify.
-	Size int
+	finalize FinalizeFn
+	// initialSize is the initial size for the map, use zero to use Go's std map
+	// initial size and consequently is optional to specify.
+	initialSize int
 }
 
 // MapEntry is an entry in the map, this is public to support iterating
@@ -119,22 +125,22 @@ func (m *Map) newMapKey(k []byte, opts mapKeyOptions) mapKey {
 		return key
 	}
 
-	key.key = m.CopyFn(k)
+	key.key = m.copy(k)
 	return key
 }
 
 func (m *Map) removeMapKey(hash MapHash, key mapKey) {
 	delete(m.lookup, hash)
 	if key.finalize {
-		m.FinalizeFn(key.key)
+		m.finalize(key.key)
 	}
 }
 
 // Get returns a value in the map for an identifier if found.
 func (m *Map) Get(k []byte) (Value, bool) {
-	hash := m.HashFn(k)
+	hash := m.hash(k)
 	for entry, ok := m.lookup[hash]; ok; entry, ok = m.lookup[hash] {
-		if m.EqualsFn(entry.key.key, k) {
+		if m.equals(entry.key.key, k) {
 			return entry.value, true
 		}
 		// Linear probe to "next" to this entry (really a rehash)
@@ -148,25 +154,23 @@ func (m *Map) Get(k []byte) (Value, bool) {
 func (m *Map) Set(k []byte, v Value) {
 	m.set(k, v, mapKeyOptions{
 		copyKey:     true,
-		finalizeKey: m.FinalizeFn != nil,
+		finalizeKey: m.finalize != nil,
 	})
 }
 
-// SetNoCopyKey will set the value for an identifier but will
-// avoid copying the identifier, it will finalize the key if/when evicted.
-func (m *Map) SetNoCopyKey(k []byte, v Value) {
-	m.set(k, v, mapKeyOptions{
-		copyKey:     false,
-		finalizeKey: true,
-	})
+// SetUnsafeOptions is a set of options to use when setting a value with
+// the SetUnsafe method.
+type SetUnsafeOptions struct {
+	NoCopyKey     bool
+	NoFinalizeKey bool
 }
 
-// SetNoCopyNoFinalizeKey will set the value for an identifier but will
-// avoid copying the identifier and will not finalize the key if/when evicted.
-func (m *Map) SetNoCopyNoFinalizeKey(k []byte, v Value) {
+// SetUnsafe will set the value for an identifier with unsafe options for how
+// the map treats the key.
+func (m *Map) SetUnsafe(k []byte, v Value, opts SetUnsafeOptions) {
 	m.set(k, v, mapKeyOptions{
-		copyKey:     false,
-		finalizeKey: false,
+		copyKey:     !opts.NoCopyKey,
+		finalizeKey: !opts.NoFinalizeKey,
 	})
 }
 
@@ -176,9 +180,9 @@ type mapKeyOptions struct {
 }
 
 func (m *Map) set(k []byte, v Value, opts mapKeyOptions) {
-	hash := m.HashFn(k)
+	hash := m.hash(k)
 	for entry, ok := m.lookup[hash]; ok; entry, ok = m.lookup[hash] {
-		if m.EqualsFn(entry.key.key, k) {
+		if m.equals(entry.key.key, k) {
 			m.lookup[hash] = MapEntry{
 				key:   entry.key,
 				value: v,
@@ -216,9 +220,9 @@ func (m *Map) Contains(k []byte) bool {
 
 // Delete will remove a value set in the map for the specified key.
 func (m *Map) Delete(k []byte) {
-	hash := m.HashFn(k)
+	hash := m.hash(k)
 	for entry, ok := m.lookup[hash]; ok; entry, ok = m.lookup[hash] {
-		if m.EqualsFn(entry.key.key, k) {
+		if m.equals(entry.key.key, k) {
 			m.removeMapKey(hash, entry.key)
 			return
 		}
@@ -239,8 +243,8 @@ func (m *Map) Reset() {
 // map, this is useful if you believe you have a large map and
 // will not need to grow back to a similar size.
 func (m *Map) Reallocate() {
-	if m.Size > 0 {
-		m.lookup = make(map[MapHash]MapEntry, m.Size)
+	if m.initialSize > 0 {
+		m.lookup = make(map[MapHash]MapEntry, m.initialSize)
 	} else {
 		m.lookup = make(map[MapHash]MapEntry)
 	}

@@ -23,7 +23,7 @@ package hashmap
 import (
 	"testing"
 
-	"github.com/m3db/m3x/hash/fnv"
+	"github.com/cespare/xxhash"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,20 +34,20 @@ import (
 // the non-generated generic map source code.
 func newTestStringMap(size int) *Map {
 	return newMap(mapOptions{
-		HashFn: func(key KeyType) MapHash {
-			return MapHash(fnv.Hash64a([]byte(key.(string))))
+		hash: func(key KeyType) MapHash {
+			return MapHash(xxhash.Sum64([]byte(key.(string))))
 		},
-		EqualsFn: func(x, y KeyType) bool {
+		equals: func(x, y KeyType) bool {
 			return x.(string) == y.(string)
 		},
-		CopyFn: func(k KeyType) KeyType {
+		copy: func(k KeyType) KeyType {
 			// Strings are immutable, so we can just return the same string
 			return k
 		},
-		FinalizeFn: func(k KeyType) {
+		finalize: func(k KeyType) {
 			// No-op, not pooling
 		},
-		Size: size,
+		initialSize: size,
 	})
 }
 
@@ -158,7 +158,7 @@ func TestMapIter(t *testing.T) {
 func TestMapCollision(t *testing.T) {
 	m := newTestStringMap(0)
 	// Always collide
-	m.HashFn = func(_ KeyType) MapHash { return 0 }
+	m.hash = func(_ KeyType) MapHash { return 0 }
 
 	// Insert foo, ensure set at fake hash
 	m.Set("foo", "a")
@@ -225,7 +225,7 @@ func TestMapSetUnsafeNoCopyKey(t *testing.T) {
 	m := newTestStringMap(0)
 
 	copies := 0
-	m.CopyFn = func(k KeyType) KeyType {
+	m.copy = func(k KeyType) KeyType {
 		copies++
 		return k
 	}
@@ -238,17 +238,17 @@ func TestMapSetUnsafeNoCopyKey(t *testing.T) {
 	assert.Equal(t, 2, copies)
 }
 
-func TestMapSetNoCopyNoFinalizeKey(t *testing.T) {
+func TestMapSetUnsafeNoCopyNoFinalizeKey(t *testing.T) {
 	m := newTestStringMap(0)
 
 	copies := 0
-	m.CopyFn = func(k KeyType) KeyType {
+	m.copy = func(k KeyType) KeyType {
 		copies++
 		return k
 	}
 
 	finalizes := 0
-	m.FinalizeFn = func(k KeyType) {
+	m.finalize = func(k KeyType) {
 		finalizes++
 	}
 

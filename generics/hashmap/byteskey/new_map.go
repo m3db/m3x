@@ -23,9 +23,9 @@ package byteskey
 import (
 	"bytes"
 
-	"github.com/m3db/m3x/hash/fnv"
 	"github.com/m3db/m3x/pool"
 
+	"github.com/cespare/xxhash"
 	"github.com/cheekybits/genny/generic"
 )
 
@@ -34,7 +34,7 @@ type Value generic.Type
 
 // MapOptions provides options used when created the map.
 type MapOptions struct {
-	Size        int
+	InitialSize int
 	KeyCopyPool pool.BytesPool
 }
 
@@ -60,14 +60,12 @@ func NewMap(opts MapOptions) *Map {
 		}
 	}
 	return newMap(mapOptions{
-		HashFn: func(k []byte) MapHash {
-			return MapHash(fnv.Hash64a(k))
+		hash: func(k []byte) MapHash {
+			return MapHash(xxhash.Sum64(k))
 		},
-		EqualsFn: func(x, y []byte) bool {
-			return bytes.Equal(x, y)
-		},
-		CopyFn:     copyFn,
-		FinalizeFn: finalizeFn,
-		Size:       opts.Size,
+		equals:      bytes.Equal,
+		copy:        copyFn,
+		finalize:    finalizeFn,
+		initialSize: opts.InitialSize,
 	})
 }

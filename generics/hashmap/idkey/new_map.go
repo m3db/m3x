@@ -24,10 +24,10 @@ import (
 	"bytes"
 
 	"github.com/m3db/m3x/checked"
-	"github.com/m3db/m3x/hash/fnv"
 	"github.com/m3db/m3x/ident"
 	"github.com/m3db/m3x/pool"
 
+	"github.com/cespare/xxhash"
 	"github.com/cheekybits/genny/generic"
 )
 
@@ -36,7 +36,7 @@ type Value generic.Type
 
 // MapOptions provides options used when created the map.
 type MapOptions struct {
-	Size        int
+	InitialSize int
 	KeyCopyPool pool.BytesPool
 }
 
@@ -65,15 +65,15 @@ func NewMap(opts MapOptions) *Map {
 		}
 	}
 	return newMap(mapOptions{
-		HashFn: func(id ident.ID) MapHash {
-			return MapHash(fnv.Hash64a(id.Bytes()))
+		hash: func(id ident.ID) MapHash {
+			return MapHash(xxhash.Sum64(id.Bytes()))
 		},
-		EqualsFn: func(x, y ident.ID) bool {
+		equals: func(x, y ident.ID) bool {
 			return x.Equal(y)
 		},
-		CopyFn:     copyFn,
-		FinalizeFn: finalizeFn,
-		Size:       opts.Size,
+		copy:        copyFn,
+		finalize:    finalizeFn,
+		initialSize: opts.InitialSize,
 	})
 }
 
@@ -82,7 +82,13 @@ func NewMap(opts MapOptions) *Map {
 // the map internally.
 type id []byte
 
+// var declaration to ensure package type id implements ident.ID
+var _ ident.ID = id(nil)
+
 func (v id) Data() checked.Bytes {
+	// Data is not called by the generated hashmap code, hence we don't
+	// implement this and no callers will call this as the generated code
+	// is the only user of this type.
 	panic("not implemented")
 }
 

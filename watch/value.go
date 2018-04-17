@@ -34,7 +34,7 @@ var (
 	errNilValue         = errors.New("nil kv value")
 )
 
-// Value is a value that can be updated during runtime.
+// Value is a resource that can be updated during runtime.
 type Value interface {
 	// Watch starts watching for value updates.
 	Watch() error
@@ -167,13 +167,10 @@ func (v *value) processWithLock(update interface{}) error {
 	if update == nil {
 		return errNilValue
 	}
-	if err := v.processFn(update); err != nil {
-		return err
-	}
-	return nil
+	return v.processFn(update)
 }
 
-// CreateWatchError is returned when encountering an error creating a
+// CreateWatchError is returned when encountering an error creating a watch.
 type CreateWatchError struct {
 	innerError error
 }

@@ -229,7 +229,7 @@ func testWatchableAndValue() (Watchable, *value) {
 	wa := NewWatchable()
 	opts := testValueOptions().
 		SetNewUpdatableFn(testUpdatableFn(wa)).
-		SetGetFn(func(updatable Updatable) (interface{}, error) {
+		SetGetUpdateFn(func(updatable Updatable) (interface{}, error) {
 			return updatable.(Watch).Get(), nil
 		})
 	return wa, NewValue(opts).(*value)

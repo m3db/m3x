@@ -50,11 +50,11 @@ type Options interface {
 	// NewUpdatableFn returns the new updatable function.
 	NewUpdatableFn() NewUpdatableFn
 
-	// SetGetFn sets the get function.
-	SetGetFn(value GetUpdateFn) Options
+	// SetGetUpdateFn sets the get function.
+	SetGetUpdateFn(value GetUpdateFn) Options
 
-	// GetFn returns the get function.
-	GetFn() GetUpdateFn
+	// GetUpdateFn returns the get function.
+	GetUpdateFn() GetUpdateFn
 
 	// SetProcessFn sets the process function.
 	SetProcessFn(value ProcessFn) Options
@@ -67,7 +67,7 @@ type options struct {
 	instrumentOpts   instrument.Options
 	initWatchTimeout time.Duration
 	newUpdatableFn   NewUpdatableFn
-	getFn            GetUpdateFn
+	getUpdateFn      GetUpdateFn
 	processFn        ProcessFn
 }
 
@@ -109,14 +109,14 @@ func (o *options) NewUpdatableFn() NewUpdatableFn {
 	return o.newUpdatableFn
 }
 
-func (o *options) SetGetFn(value GetUpdateFn) Options {
+func (o *options) SetGetUpdateFn(value GetUpdateFn) Options {
 	opts := *o
-	opts.getFn = value
+	opts.getUpdateFn = value
 	return &opts
 }
 
-func (o *options) GetFn() GetUpdateFn {
-	return o.getFn
+func (o *options) GetUpdateFn() GetUpdateFn {
+	return o.getUpdateFn
 }
 
 func (o *options) SetProcessFn(value ProcessFn) Options {

@@ -84,7 +84,7 @@ func NewValue(
 		opts:           opts,
 		log:            opts.InstrumentOptions().Logger(),
 		newUpdatableFn: opts.NewUpdatableFn(),
-		getUpdateFn:    opts.GetFn(),
+		getUpdateFn:    opts.GetUpdateFn(),
 		processFn:      opts.ProcessFn(),
 	}
 	v.processWithLockFn = v.processWithLock

@@ -1,5 +1,4 @@
 _mock.go
-_matcher.go
 generated/
 vendor/
 integration/

@@ -21,22 +21,37 @@
 package ident
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/golang/mock/gomock"
 )
 
-// TagIteratorMatcher is a gomock.Matcher that matches TagIterator
-type TagIteratorMatcher interface {
+var (
+	errInvalidNumberInputsToIteratorMatcher = errors.New("inputs must be specified in name-value pairs (i.e. divisible by 2)")
+)
+
+// TagIterMatcher is a gomock.Matcher that matches TagIterator
+type TagIterMatcher interface {
 	gomock.Matcher
 }
 
-// NewTagIteratorMatcher returns a new TagIteratorMatcher
-func NewTagIteratorMatcher(inputs ...string) TagIteratorMatcher {
+// NewTagIterMatcher returns a new TagIterMatcher
+func NewTagIterMatcher(inputs ...string) (TagIterMatcher, error) {
 	if len(inputs)%2 != 0 {
-		panic("inputs must be specified in name-value pairs (i.e. divisible by 2)")
+		return nil, errInvalidNumberInputsToIteratorMatcher
 	}
-	return &tagIterMatcher{inputs: inputs}
+	return &tagIterMatcher{inputs: inputs}, nil
+}
+
+// MustNewTagIterMatcher returns a new TagIterMatcher, panic'ing if
+// it's unable to do so.
+func MustNewTagIterMatcher(inputs ...string) TagIterMatcher {
+	iter, err := NewTagIterMatcher(inputs...)
+	if err != nil {
+		panic(err.Error())
+	}
+	return iter
 }
 
 type tagIterMatcher struct {
@@ -74,5 +89,5 @@ func (m *tagIterMatcher) Matches(x interface{}) bool {
 }
 
 func (m *tagIterMatcher) String() string {
-	return fmt.Sprintf("tagIter %+v", m.inputs)
+	return fmt.Sprintf("tagIter %v", m.inputs)
 }

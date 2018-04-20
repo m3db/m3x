@@ -39,10 +39,10 @@ func TestTagIteratorMatcher(t *testing.T) {
 }
 
 func TestTagIteratorMatcherNotMatching(t *testing.T) {
-	iter := ident.NewTagIterator(
-		ident.StringTag("hello", "there"),
-		ident.StringTag("foo", "bar"))
-	matcher := ident.NewTagIteratorMatcher("hello", "bar")
+	matcher := ident.NewTagIteratorMatcher()
+	assert.False(t, matcher.Matches(1))
+
+	iter := ident.NewTagIterator(ident.StringTag("hello", "there"))
 	assert.False(t, matcher.Matches(iter))
 }
 

@@ -18,49 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package context
+package arraypool
 
 import (
-	"github.com/m3db/m3x/pool"
-	"github.com/m3db/m3x/resource"
+	"github.com/cheekybits/genny/generic"
 )
 
-type poolOfContexts struct {
-	ctxPool        pool.ObjectPool
-	finalizersPool finalizersArrayPool
-}
-
-// NewPool creates a new context pool.
-func NewPool(opts Options) Pool {
-	p := &poolOfContexts{
-		ctxPool: pool.NewObjectPool(opts.ContextPoolOptions()),
-		finalizersPool: newFinalizersArrayPool(finalizersArrayPoolOpts{
-			Capacity:    opts.InitPooledFinalizerCapacity(),
-			MaxCapacity: opts.MaxPooledFinalizerCapacity(),
-			Options:     opts.FinalizerPoolOptions(),
-		}),
-	}
-
-	p.finalizersPool.Init()
-	p.ctxPool.Init(func() interface{} {
-		return newPooledContext(p)
-	})
-
-	return p
-}
-
-func (p *poolOfContexts) Get() Context {
-	return p.ctxPool.Get().(Context)
-}
-
-func (p *poolOfContexts) Put(context Context) {
-	p.ctxPool.Put(context)
-}
-
-func (p *poolOfContexts) GetFinalizers() []resource.Finalizer {
-	return p.finalizersPool.Get()
-}
-
-func (p *poolOfContexts) PutFinalizers(finalizers []resource.Finalizer) {
-	p.finalizersPool.Put(finalizers)
-}
+// elemType is the generic type for use with the specialized array pool.
+// NB: we need this type decl to allow codegen and tests to succeed. It's
+// kept in a separate file to allow generation of specialized array pools
+// without requiring a corresponding element declaration.
+type elemType generic.Type

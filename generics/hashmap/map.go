@@ -93,6 +93,7 @@ type mapOptions struct {
 
 // MapEntry is an entry in the map, this is public to support iterating
 // over the map using a native Go for loop.
+// nolint: maligned
 type MapEntry struct {
 	// key is used to check equality on lookups to resolve collisions
 	key mapKey

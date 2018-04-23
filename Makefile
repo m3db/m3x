@@ -160,7 +160,7 @@ hashmap-gen-rename:
 # arraypool generation rule
 .PHONY: genny-arraypool
 genny-arraypool: install-generics-bin
-	cat ./generics/arraypool/pool.go | grep -v nolint | genny -pkg $(pkg) gen "elemType=$(elem_type)" > "$(out_dir)/$(out_file)"
+	cat ./generics/arraypool/pool.go | grep -v nolint | genny -pkg $(pkg) -ast gen "elemType=$(elem_type)" > "$(out_dir)/$(out_file)"
 ifneq ($(rename_type_prefix),)
 	make arraypool-gen-rename
 endif

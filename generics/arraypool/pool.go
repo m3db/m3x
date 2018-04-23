@@ -22,12 +22,23 @@ package arraypool
 
 import (
 	"github.com/m3db/m3x/pool"
+
+	"github.com/mauricelam/genny/generic"
 )
+
+// elemType is the generic type for use with the specialized array pool.
+type elemType generic.Type
 
 // elemArrayPool provides a pool for elemType slices.
 type elemArrayPool interface {
+	// Init initializes the array pool, it needs to be called
+	// before Get/Put use.
 	Init()
+
+	// Get returns the a slice from the pool.
 	Get() []elemType
+
+	// Put returns the provided slice to the pool.
 	Put(elems []elemType)
 }
 

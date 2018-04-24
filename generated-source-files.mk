@@ -1,3 +1,4 @@
+temp_suffix              := _temp
 gorename_package         := github.com/prateek/gorename
 gorename_package_version := 52c7307cddd221bb98f0a3215216789f3c821b10
 
@@ -21,6 +22,7 @@ idhashmap-update: install-generics-bin
 byteshashmap-update: install-generics-bin
 	cd generics/hashmap && cat ./map.go | grep -v nolint | genny -pkg byteskey gen "KeyType=[]byte ValueType=MapValue" > ./byteskey/map_gen.go
 
+# NB(prateek): `target_package` should not have a trailing slash
 # generic targets meant to be re-used by other users
 .PHONY: hashmap-gen
 hashmap-gen: install-generics-bin
@@ -99,9 +101,9 @@ genny-arraypool-context-finalizers: install-generics-bin
 		out_file=finalizers_arraypool_gen.go      \
 		rename_type_middle=Finalizers             \
 		rename_constructor=newFinalizersArrayPool \
-		rename_type_prefix=finalizers             \
-		temp_suffix=temp
+		rename_type_prefix=finalizers
 
+# NB(prateek): `target_package` should not have a trailing slash
 # generic arraypool generation rule
 .PHONY: genny-arraypool
 genny-arraypool: install-generics-bin

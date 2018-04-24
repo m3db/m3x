@@ -122,7 +122,7 @@ func TestGoWithTimeout(t *testing.T) {
 	require.Equal(t, uint32(testWorkerPoolSize+1), count)
 }
 
-func TestFullWorkerPool(t *testing.T) {
+func TestInitOnInitializedWorkerPool(t *testing.T) {
 	var count uint32
 
 	p := NewWorkerPool(testWorkerPoolSize)

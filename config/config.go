@@ -50,7 +50,7 @@ func loadFiles(config interface{}, fnames ...string) error {
 			return err
 		}
 
-		if err := yaml.Unmarshal(data, config); err != nil {
+		if err := yaml.UnmarshalStrict(data, config); err != nil {
 			return err
 		}
 	}

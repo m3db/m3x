@@ -47,7 +47,8 @@ type WorkerPool interface {
 }
 
 type workerPool struct {
-	workCh chan struct{}
+	workCh      chan struct{}
+	initialized bool
 }
 
 // NewWorkerPool creates a new worker pool.
@@ -56,12 +57,13 @@ func NewWorkerPool(size int) WorkerPool {
 }
 
 func (p *workerPool) Init() {
-	if len(p.workCh) == cap(p.workCh) {
+	if p.initialized {
 		return
 	}
 	for i := 0; i < cap(p.workCh); i++ {
 		p.workCh <- struct{}{}
 	}
+	p.initialized = true
 }
 
 func (p *workerPool) Go(work Work) {

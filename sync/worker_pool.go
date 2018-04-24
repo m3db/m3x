@@ -56,6 +56,9 @@ func NewWorkerPool(size int) WorkerPool {
 }
 
 func (p *workerPool) Init() {
+	if len(p.workCh) == cap(p.workCh) {
+		return
+	}
 	for i := 0; i < cap(p.workCh); i++ {
 		p.workCh <- struct{}{}
 	}

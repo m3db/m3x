@@ -121,3 +121,23 @@ func TestGoWithTimeout(t *testing.T) {
 
 	require.Equal(t, uint32(testWorkerPoolSize+1), count)
 }
+
+func TestFullWorkerPool(t *testing.T) {
+	var count uint32
+
+	p := NewWorkerPool(testWorkerPoolSize)
+	p.Init()
+	p.Init()
+
+	var wg sync.WaitGroup
+	for i := 0; i < testWorkerPoolSize*2; i++ {
+		wg.Add(1)
+		p.Go(func() {
+			atomic.AddUint32(&count, 1)
+			wg.Done()
+		})
+	}
+	wg.Wait()
+
+	require.Equal(t, uint32(testWorkerPoolSize*2), count)
+}

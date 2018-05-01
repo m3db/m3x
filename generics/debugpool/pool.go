@@ -25,7 +25,7 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/cheekybits/genny/generic"
+	"github.com/mauricelam/genny/generic"
 )
 
 // elemType is the generic type for use with the debug pool.
@@ -51,6 +51,7 @@ type debugElemTypePoolOpts struct {
 }
 
 // newDebugElemTypePool returns a new debugElemTypePool
+// nolint
 func newDebugElemTypePool(opts debugElemTypePoolOpts, backingPool elemTypePool) *debugElemTypePool {
 	if opts.equalsFn == nil {
 		// NB(prateek): fall-back to == in the worst case

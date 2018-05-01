@@ -130,11 +130,11 @@ arraypool-gen-rename: install-gorename
 	gorename -from '"$(target_package)$(temp_suffix)".defaultElemFinalizerFn' -to default$(rename_type_middle)FinalizerFn
 
 # NB(prateek): `target_package` should not have a trailing slash
-# generic debugpool generation rule
-.PHONY: genny-debugpool
-genny-debugpool: install-generics-bin
+# generic leakcheckpool generation rule
+.PHONY: genny-leakcheckpool
+genny-leakcheckpool: install-generics-bin
 	$(eval out_dir=$(gopath_prefix)/$(target_package))
-	cat ./generics/debugpool/pool.go | grep -v nolint | genny -pkg $(pkg) -ast gen "elemType=$(elem_type) elemTypePool=$(elem_type_pool)" > "$(out_dir)/$(out_file)"
+	cat ./generics/leakcheckpool/pool.go | grep -v nolint | genny -pkg $(pkg) -ast gen "elemType=$(elem_type) elemTypePool=$(elem_type_pool)" > "$(out_dir)/$(out_file)"
 
 install-gorename:
 	$(eval gorename_dir=$(gopath_prefix)/$(gorename_package))

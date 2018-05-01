@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package debugpool
+package leakcheckpool
 
 import (
 	"fmt"
@@ -44,86 +44,89 @@ type elemTypePool interface {
 	Put(elemType)
 }
 
-// debugElemTypePoolOpts allows users to override default behaviour.
-type debugElemTypePoolOpts struct {
-	disallowUntrackedPuts bool
-	equalsFn              elemTypeEqualsFn
+// leakcheckElemTypePoolOpts allows users to override default behaviour.
+type leakcheckElemTypePoolOpts struct {
+	DisallowUntrackedPuts bool
+	EqualsFn              elemTypeEqualsFn
 }
 
-// newDebugElemTypePool returns a new debugElemTypePool
+// newLeakcheckElemTypePool returns a new leakcheckElemTypePool.
 // nolint
-func newDebugElemTypePool(opts debugElemTypePoolOpts, backingPool elemTypePool) *debugElemTypePool {
-	if opts.equalsFn == nil {
+func newLeakcheckElemTypePool(opts leakcheckElemTypePoolOpts, backingPool elemTypePool) *leakcheckElemTypePool {
+	if opts.EqualsFn == nil {
 		// NB(prateek): fall-back to == in the worst case
-		opts.equalsFn = func(a, b elemType) bool {
+		opts.EqualsFn = func(a, b elemType) bool {
 			return a == b
 		}
 	}
-	return &debugElemTypePool{opts: opts, elemTypePool: backingPool}
+	return &leakcheckElemTypePool{opts: opts, elemTypePool: backingPool}
 }
 
-// debugElemTypePool wraps the underlying elemTypePool to allow
-// tests to track Gets/Puts.
-type debugElemTypePool struct {
+var _ elemTypePool = &leakcheckElemTypePool{}
+
+// leakcheckElemTypePool wraps the underlying elemTypePool to make it easier to
+// track leaks/allocs.
+type leakcheckElemTypePool struct {
 	sync.Mutex
 	elemTypePool
-	numGets      int
-	numPuts      int
-	pendingItems []debugElemType
-	allGetItems  []debugElemType
+	NumGets      int
+	NumPuts      int
+	PendingItems []leakcheckElemType
+	AllGetItems  []leakcheckElemType
 
-	opts debugElemTypePoolOpts
+	opts leakcheckElemTypePoolOpts
 }
 
-type debugElemType struct {
-	value    elemType
-	getStack []byte // getStack is the Stacktrace for the retrieval of this item
+// leakcheckElemType wraps `elemType` instances along with their last Get() paths.
+type leakcheckElemType struct {
+	Value         elemType
+	GetStacktrace []byte // GetStacktrace is the stacktrace for the Get() of this item
 }
 
-func (p *debugElemTypePool) Init() {
+func (p *leakcheckElemTypePool) Init() {
 	p.Lock()
 	defer p.Unlock()
 	p.elemTypePool.Init()
 }
 
-func (p *debugElemTypePool) Get() elemType {
+func (p *leakcheckElemTypePool) Get() elemType {
 	p.Lock()
 	defer p.Unlock()
 
 	e := p.elemTypePool.Get()
 
-	p.numGets++
-	item := debugElemType{
-		value:    e,
-		getStack: debug.Stack(),
+	p.NumGets++
+	item := leakcheckElemType{
+		Value:         e,
+		GetStacktrace: debug.Stack(),
 	}
-	p.pendingItems = append(p.pendingItems, item)
-	p.allGetItems = append(p.allGetItems, item)
+	p.PendingItems = append(p.PendingItems, item)
+	p.AllGetItems = append(p.AllGetItems, item)
 
 	return e
 }
 
-func (p *debugElemTypePool) Put(value elemType) {
+func (p *leakcheckElemTypePool) Put(value elemType) {
 	p.Lock()
 	defer p.Unlock()
 
 	idx := -1
-	for i, item := range p.pendingItems {
-		if p.opts.equalsFn(item.value, value) {
+	for i, item := range p.PendingItems {
+		if p.opts.EqualsFn(item.Value, value) {
 			idx = i
 			break
 		}
 	}
 
-	if idx == -1 && p.opts.disallowUntrackedPuts {
+	if idx == -1 && p.opts.DisallowUntrackedPuts {
 		panic(fmt.Errorf("untracked object (%v) returned to pool", value))
 	}
 
 	if idx != -1 {
 		// update slice
-		p.pendingItems = append(p.pendingItems[:idx], p.pendingItems[idx+1:]...)
+		p.PendingItems = append(p.PendingItems[:idx], p.PendingItems[idx+1:]...)
 	}
-	p.numPuts++
+	p.NumPuts++
 
 	p.elemTypePool.Put(value)
 }

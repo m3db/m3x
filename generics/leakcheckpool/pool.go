@@ -24,8 +24,10 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sync"
+	"testing"
 
 	"github.com/mauricelam/genny/generic"
+	"github.com/stretchr/testify/require"
 )
 
 // elemType is the generic type for use with the debug pool.
@@ -127,4 +129,25 @@ func (p *leakcheckElemTypePool) Put(value elemType) {
 	p.NumPuts++
 
 	p.elemTypePool.Put(value)
+}
+
+// Check ensures there are no leaks.
+func (p *leakcheckElemTypePool) Check(t *testing.T) {
+	p.Lock()
+	defer p.Unlock()
+
+	require.Equal(t, p.NumGets, p.NumPuts)
+	require.Empty(t, p.PendingItems)
+}
+
+type leakcheckElemTypeFn func(e leakcheckElemType)
+
+// CheckExtended ensures there are no leaks, and executes the specified fn
+func (p *leakcheckElemTypePool) CheckExtended(t *testing.T, fn leakcheckElemTypeFn) {
+	p.Check(t)
+	p.Lock()
+	defer p.Unlock()
+	for _, e := range p.AllGetItems {
+		fn(e)
+	}
 }

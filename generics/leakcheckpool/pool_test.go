@@ -140,3 +140,34 @@ func TestStacksDiffer(t *testing.T) {
 	require.NotEqual(t, debugPool.AllGetItems[0].GetStacktrace, debugPool.AllGetItems[1].GetStacktrace)
 	debugPool.Unlock()
 }
+
+func TestCheck(t *testing.T) {
+	var (
+		empty elemType
+	)
+
+	getFn := func() elemType { return empty }
+	putFn := func(elemType) {}
+
+	debugPool := newLeakcheckElemTypePool(leakcheckElemTypePoolOpts{}, &testElemTypePool{getFn: getFn, putFn: putFn})
+	defer debugPool.Check(t)
+	val := debugPool.Get()
+	require.Equal(t, empty, val)
+	debugPool.Put(val)
+}
+
+func TestCheckExtended(t *testing.T) {
+	var (
+		empty elemType
+	)
+
+	getFn := func() elemType { return empty }
+	putFn := func(elemType) {}
+
+	debugPool := newLeakcheckElemTypePool(leakcheckElemTypePoolOpts{}, &testElemTypePool{getFn: getFn, putFn: putFn})
+	defer debugPool.CheckExtended(t, func(e leakcheckElemType) {
+		require.Equal(t, empty, e.Value, string(e.GetStacktrace))
+	})
+	val := debugPool.Get()
+	debugPool.Put(val)
+}

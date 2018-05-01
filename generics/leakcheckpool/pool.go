@@ -62,8 +62,6 @@ func newLeakcheckElemTypePool(opts leakcheckElemTypePoolOpts, backingPool elemTy
 	return &leakcheckElemTypePool{opts: opts, elemTypePool: backingPool}
 }
 
-var _ elemTypePool = &leakcheckElemTypePool{}
-
 // leakcheckElemTypePool wraps the underlying elemTypePool to make it easier to
 // track leaks/allocs.
 type leakcheckElemTypePool struct {

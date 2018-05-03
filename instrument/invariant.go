@@ -27,13 +27,13 @@ const (
 	// invocation of `EmitInvariantViolation`.
 	InvariantViolatedMetricName = "invariant_violated"
 
-	// InvariantViolatedLogFieldName is the name of a the log field to be
+	// InvariantViolatedLogFieldName is the name of the log field to be
 	// used when generating errors/log statements pertaining to the violation
 	// of an invariant.
 	InvariantViolatedLogFieldName = "violation"
 
-	// InvariantViolatedLogFieldValue is a the field that should be used
-	// when generating errors/log statements pertaining to the violation
+	// InvariantViolatedLogFieldValue is the value of the log field to be
+	// used when generating errors/log statements pertaining to the violation
 	// of an invariant.
 	InvariantViolatedLogFieldValue = InvariantViolatedMetricName
 )

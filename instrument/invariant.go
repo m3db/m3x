@@ -25,7 +25,7 @@ import "github.com/m3db/m3x/log"
 const (
 	// InvariantViolatedMetricName is the name of the metric emitted upon
 	// invocation of `EmitInvariantViolation`.
-	InvariantViolatedMetricName = "invariant-violated"
+	InvariantViolatedMetricName = "invariant_violated"
 
 	// InvariantViolatedLogFieldName is the name of a the log field to be
 	// used when generating errors/log statements pertaining to the violation
@@ -35,7 +35,7 @@ const (
 	// InvariantViolatedLogFieldValue is a the field that should be used
 	// when generating errors/log statements pertaining to the violation
 	// of an invariant.
-	InvariantViolatedLogFieldValue = "[invariant violated]"
+	InvariantViolatedLogFieldValue = InvariantViolatedMetricName
 )
 
 // EmitInvariantViolation emits a metric to indicate a system invariant has

@@ -20,7 +20,16 @@
 
 package instrument
 
-const invariantViolatedMetricName = "system-invariant-violated"
+const (
+	// InvariantViolatedMetricName is the name of the metric emitted upon
+	// invocation of `EmitInvariantViolation`.
+	InvariantViolatedMetricName = "invariant-violated"
+
+	// InvariantViolatedLogPrefix is a common prefix that should be used
+	// when generating errors/log statements pertaining to the violation
+	// of an invariant.
+	InvariantViolatedLogPrefix = "[invariant violated]"
+)
 
 // EmitInvariantViolation emits a metric to indicate a system invariant has
 // been violated. Users of this method are expected to monitor/alert off this
@@ -31,5 +40,5 @@ func EmitInvariantViolation(opts Options) {
 	// NB(prateek): there's no need to cache this metric. It should be never
 	// be called in production systems unless something is seriously messed
 	// up. At which point, the extra map alloc should be of no concern.
-	opts.MetricsScope().Counter(invariantViolatedMetricName).Inc(1)
+	opts.MetricsScope().Counter(InvariantViolatedMetricName).Inc(1)
 }

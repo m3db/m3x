@@ -20,15 +20,22 @@
 
 package instrument
 
+import "github.com/m3db/m3x/log"
+
 const (
 	// InvariantViolatedMetricName is the name of the metric emitted upon
 	// invocation of `EmitInvariantViolation`.
 	InvariantViolatedMetricName = "invariant-violated"
 
-	// InvariantViolatedLogPrefix is a common prefix that should be used
+	// InvariantViolatedLogFieldName is the name of a the log field to be
+	// used when generating errors/log statements pertaining to the violation
+	// of an invariant.
+	InvariantViolatedLogFieldName = "violation"
+
+	// InvariantViolatedLogFieldValue is a the field that should be used
 	// when generating errors/log statements pertaining to the violation
 	// of an invariant.
-	InvariantViolatedLogPrefix = "[invariant violated]"
+	InvariantViolatedLogFieldValue = "[invariant violated]"
 )
 
 // EmitInvariantViolation emits a metric to indicate a system invariant has
@@ -41,4 +48,15 @@ func EmitInvariantViolation(opts Options) {
 	// be called in production systems unless something is seriously messed
 	// up. At which point, the extra map alloc should be of no concern.
 	opts.MetricsScope().Counter(InvariantViolatedMetricName).Inc(1)
+}
+
+// InvariantViolationLogger emits a metric to indicate a system invariant has
+// been violated. Users of this method are expected to monitor/alert off this
+// metric to ensure they're notified when such an event occurs. Further, it
+// returns a logger which users are expected to log more information to aid
+// diagnostics of the system invariant violated at the callsite of the violation.
+func InvariantViolationLogger(opts Options) log.Logger {
+	EmitInvariantViolation(opts)
+	return opts.Logger().WithFields(
+		log.NewField(InvariantViolatedLogFieldName, InvariantViolatedLogFieldValue))
 }

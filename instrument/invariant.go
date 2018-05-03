@@ -50,13 +50,17 @@ func EmitInvariantViolation(opts Options) {
 	opts.MetricsScope().Counter(InvariantViolatedMetricName).Inc(1)
 }
 
-// InvariantViolationLogger emits a metric to indicate a system invariant has
-// been violated. Users of this method are expected to monitor/alert off this
-// metric to ensure they're notified when such an event occurs. Further, it
-// returns a logger which users are expected to log more information to aid
-// diagnostics of the system invariant violated at the callsite of the violation.
+// InvariantViolationLogger returns a logger which users are expected to use to log
+// more information to aid diagnostics of the system invariant violated at the callsite
+// of the violation.
 func InvariantViolationLogger(opts Options) log.Logger {
-	EmitInvariantViolation(opts)
 	return opts.Logger().WithFields(
 		log.NewField(InvariantViolatedLogFieldName, InvariantViolatedLogFieldValue))
+}
+
+// EmitInvariantViolationAndGetLogger invokes EmitInvariantViolation(opts) and returns
+// the result of InvariantViolationLogger(opts).
+func EmitInvariantViolationAndGetLogger(opts Options) log.Logger {
+	EmitInvariantViolation(opts)
+	return InvariantViolationLogger(opts)
 }

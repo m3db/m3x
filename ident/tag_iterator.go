@@ -108,12 +108,7 @@ func (i *tagSliceIter) Duplicate() TagIterator {
 func (i *tagSliceIter) Reset(tags Tags) {
 	i.backingSlice = tags
 	i.currentIdx = -1
-	if len(tags) != 0 {
-		// NB(r): To support calls to Current() before the first Next() is called.
-		i.currentTag = tags[0]
-	} else {
-		i.currentTag = Tag{}
-	}
+	i.currentTag = Tag{}
 }
 
 // EmptyTagIterator returns an iterator over no tags.

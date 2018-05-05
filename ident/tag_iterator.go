@@ -26,8 +26,8 @@ var (
 	errInvalidNumberInputsToIteratorMatcher = errors.New("inputs must be specified in name-value pairs (i.e. divisible by 2)")
 )
 
-// NewTagIterator returns a new TagIterator over the given Tags.
-func NewTagIterator(tags ...Tag) TagIterator {
+// NewTagIterator returns a new TagSliceIterator over the given Tags.
+func NewTagIterator(tags ...Tag) TagSliceIterator {
 	return NewTagSliceIterator(tags)
 }
 
@@ -53,12 +53,10 @@ func NewTagStringsIterator(inputs ...string) (TagIterator, error) {
 	return NewTagSliceIterator(tags), nil
 }
 
-// NewTagSliceIterator returns a TagIterator over a slice.
-func NewTagSliceIterator(tags Tags) TagIterator {
-	iter := &tagSliceIter{
-		backingSlice: tags,
-		currentIdx:   -1,
-	}
+// NewTagSliceIterator returns a TagSliceIterator over a slice.
+func NewTagSliceIterator(tags Tags) TagSliceIterator {
+	iter := &tagSliceIter{}
+	iter.Reset(tags)
 	return iter
 }
 
@@ -104,6 +102,17 @@ func (i *tagSliceIter) Duplicate() TagIterator {
 		backingSlice: i.backingSlice,
 		currentIdx:   i.currentIdx,
 		currentTag:   i.currentTag,
+	}
+}
+
+func (i *tagSliceIter) Reset(tags Tags) {
+	i.backingSlice = tags
+	i.currentIdx = -1
+	if len(tags) != 0 {
+		// NB(r): To support calls to Current() before the first Next() is called.
+		i.currentTag = tags[0]
+	} else {
+		i.currentTag = Tag{}
 	}
 }
 

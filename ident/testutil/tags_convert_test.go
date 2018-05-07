@@ -21,10 +21,12 @@
 package testutil
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/m3db/m3x/ident"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,4 +50,24 @@ func TestNewTagsFromTagIteratorEmptyTagIteratorDoesNotAlloc(t *testing.T) {
 	tags, err := NewTagsFromTagIterator(ident.EmptyTagIterator)
 	require.NoError(t, err)
 	require.Nil(t, tags)
+}
+
+func TestNewTagsFromTagIteratorError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	expectedErr := errors.New("expected error")
+
+	mockIter := ident.NewMockTagIterator(ctrl)
+	gomock.InOrder(
+		mockIter.EXPECT().Remaining().Return(1),
+		mockIter.EXPECT().Next().Return(true),
+		mockIter.EXPECT().Current().Return(ident.StringTag("foo", "bar")),
+		mockIter.EXPECT().Next().Return(false),
+		mockIter.EXPECT().Err().Return(expectedErr),
+		mockIter.EXPECT().Close(),
+	)
+
+	_, err := NewTagsFromTagIterator(mockIter)
+	require.Error(t, err)
 }

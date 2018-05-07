@@ -28,6 +28,8 @@ import (
 // NewTagsFromTagIterator allocates tags for each tag for a tag iterator, this
 // will copy bytes from the iterator.
 func NewTagsFromTagIterator(iter ident.TagIterator) (ident.Tags, error) {
+	defer iter.Close()
+
 	var tags ident.Tags
 	if tagsLen := iter.Remaining(); tagsLen > 0 {
 		tags = make(ident.Tags, 0, tagsLen)
@@ -37,10 +39,9 @@ func NewTagsFromTagIterator(iter ident.TagIterator) (ident.Tags, error) {
 			tagValue := checked.NewBytes(append([]byte(nil), curr.Value.Bytes()...), nil)
 			tags = append(tags, ident.BinaryTag(tagName, tagValue))
 		}
-		if err := iter.Err(); err != nil {
-			return nil, err
-		}
-		iter.Close()
+	}
+	if err := iter.Err(); err != nil {
+		return nil, err
 	}
 	return tags, nil
 }

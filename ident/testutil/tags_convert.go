@@ -26,7 +26,7 @@ import (
 )
 
 // NewTagsFromTagIterator allocates tags for each tag for a tag iterator, this
-// will allocate intermediate strings.
+// will copy bytes from the iterator.
 func NewTagsFromTagIterator(iter ident.TagIterator) (ident.Tags, error) {
 	var tags ident.Tags
 	if tagsLen := iter.Remaining(); tagsLen > 0 {

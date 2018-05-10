@@ -107,15 +107,15 @@ func TestDependsOnNoCloserAllocation(t *testing.T) {
 func TestDependsOnWithReset(t *testing.T) {
 	ctx := NewContext().(*ctx)
 
-	testDependsOn(ctx, t)
+	testDependsOn(t, ctx, true)
 
 	// Reset and test works again.
 	ctx.Reset()
 
-	testDependsOn(ctx, t)
+	testDependsOn(t, ctx, true)
 }
 
-func testDependsOn(c *ctx, t *testing.T) {
+func testDependsOn(t *testing.T, c *ctx, blocking bool) {
 	var wg sync.WaitGroup
 	var closed int32
 

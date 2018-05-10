@@ -104,18 +104,23 @@ func TestDependsOnNoCloserAllocation(t *testing.T) {
 	assert.Nil(t, ctx.finalizeables)
 }
 
+func TestDependsOn(t *testing.T) {
+	ctx := NewContext().(*ctx)
+	testDependsOn(t, ctx)
+}
+
 func TestDependsOnWithReset(t *testing.T) {
 	ctx := NewContext().(*ctx)
 
-	testDependsOn(t, ctx, true)
+	testDependsOn(t, ctx)
 
 	// Reset and test works again.
 	ctx.Reset()
 
-	testDependsOn(t, ctx, true)
+	testDependsOn(t, ctx)
 }
 
-func testDependsOn(t *testing.T, c *ctx, blocking bool) {
+func testDependsOn(t *testing.T, c *ctx) {
 	var wg sync.WaitGroup
 	var closed int32
 
@@ -137,7 +142,7 @@ func testDependsOn(t *testing.T, c *ctx, blocking bool) {
 	assert.Equal(t, int32(0), atomic.LoadInt32(&closed))
 
 	// Now close the context ctx is dependent on.
-	other.Close()
+	other.BlockingClose()
 
 	wg.Wait()
 

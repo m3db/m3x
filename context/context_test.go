@@ -44,7 +44,28 @@ func TestRegisterFinalizer(t *testing.T) {
 		wg.Done()
 	}))
 
-	assert.Equal(t, 1, len(ctx.finalizers))
+	assert.Equal(t, 1, len(ctx.finalizeables))
+
+	ctx.Close()
+	wg.Wait()
+
+	assert.Equal(t, true, closed)
+}
+
+func TestRegisterCloser(t *testing.T) {
+	var (
+		wg     sync.WaitGroup
+		closed = false
+		ctx    = NewContext().(*ctx)
+	)
+
+	wg.Add(1)
+	ctx.RegisterCloser(resource.CloserFn(func() {
+		closed = true
+		wg.Done()
+	}))
+
+	assert.Equal(t, 1, len(ctx.finalizeables))
 
 	ctx.Close()
 	wg.Wait()
@@ -57,7 +78,7 @@ func TestDoesNotRegisterFinalizerWhenClosed(t *testing.T) {
 	ctx.Close()
 	ctx.RegisterFinalizer(resource.FinalizerFn(func() {}))
 
-	assert.Equal(t, 0, len(ctx.finalizers))
+	assert.Equal(t, 0, len(ctx.finalizeables))
 }
 
 func TestDoesNotCloseTwice(t *testing.T) {
@@ -80,7 +101,7 @@ func TestDoesNotCloseTwice(t *testing.T) {
 func TestDependsOnNoCloserAllocation(t *testing.T) {
 	ctx := NewContext().(*ctx)
 	ctx.DependsOn(NewContext())
-	assert.Nil(t, ctx.finalizers)
+	assert.Nil(t, ctx.finalizeables)
 }
 
 func TestDependsOnWithReset(t *testing.T) {

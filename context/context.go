@@ -30,10 +30,15 @@ import (
 type ctx struct {
 	sync.RWMutex
 
-	pool       contextPool
-	done       bool
-	wg         sync.WaitGroup
-	finalizers []resource.Finalizer
+	pool          contextPool
+	done          bool
+	wg            sync.WaitGroup
+	finalizeables []finalizeable
+}
+
+type finalizeable struct {
+	finalizer resource.Finalizer
+	closer    resource.Closer
 }
 
 // NewContext creates a new context.
@@ -55,28 +60,36 @@ func (c *ctx) IsClosed() bool {
 }
 
 func (c *ctx) RegisterFinalizer(f resource.Finalizer) {
+	c.registerFinalizeable(finalizeable{finalizer: f})
+}
+
+func (c *ctx) RegisterCloser(f resource.Closer) {
+	c.registerFinalizeable(finalizeable{closer: f})
+}
+
+func (c *ctx) registerFinalizeable(f finalizeable) {
 	if c.Lock(); c.done {
 		c.Unlock()
 		return
 	}
 
-	if c.finalizers != nil {
-		c.finalizers = append(c.finalizers, f)
+	if c.finalizeables != nil {
+		c.finalizeables = append(c.finalizeables, f)
 		c.Unlock()
 		return
 	}
 
 	if c.pool != nil {
-		c.finalizers = append(c.pool.GetFinalizers(), f)
+		c.finalizeables = append(c.pool.getFinalizeables(), f)
 	} else {
-		c.finalizers = append(allocateFinalizers(), f)
+		c.finalizeables = append(allocateFinalizeables(), f)
 	}
 
 	c.Unlock()
 }
 
-func allocateFinalizers() []resource.Finalizer {
-	return make([]resource.Finalizer, 0, defaultInitFinalizersCap)
+func allocateFinalizeables() []finalizeable {
+	return make([]finalizeable, 0, defaultInitFinalizersCap)
 }
 
 func (c *ctx) DependsOn(blocker Context) {
@@ -119,7 +132,7 @@ func (c *ctx) close(mode closeMode) {
 	c.done = true
 	c.Unlock()
 
-	if len(c.finalizers) == 0 {
+	if len(c.finalizeables) == 0 {
 		c.returnToPool()
 		return
 	}
@@ -137,8 +150,15 @@ func (c *ctx) finalize() {
 	c.wg.Wait()
 
 	// Now call finalizers.
-	for i := range c.finalizers {
-		c.finalizers[i].Finalize()
+	for i := range c.finalizeables {
+		if c.finalizeables[i].finalizer != nil {
+			c.finalizeables[i].finalizer.Finalize()
+			c.finalizeables[i].finalizer = nil
+		}
+		if c.finalizeables[i].closer != nil {
+			c.finalizeables[i].closer.Close()
+			c.finalizeables[i].closer = nil
+		}
 	}
 
 	c.returnToPool()
@@ -147,11 +167,11 @@ func (c *ctx) finalize() {
 func (c *ctx) Reset() {
 	c.Lock()
 
-	if c.pool != nil && c.finalizers != nil {
-		c.pool.PutFinalizers(c.finalizers)
+	if c.pool != nil && c.finalizeables != nil {
+		c.pool.putFinalizeables(c.finalizeables)
 	}
 
-	c.done, c.finalizers = false, nil
+	c.done, c.finalizeables = false, nil
 
 	c.Unlock()
 }

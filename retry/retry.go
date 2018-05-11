@@ -152,14 +152,14 @@ func (r *retrier) attempt(continueFn ContinueFn, fn Fn) error {
 	return err
 }
 
-func (r *retrier) BackoffNanos(try int) int64 {
+func (r *retrier) BackoffNanos(retry int) int64 {
 	backoff := r.initialBackoff.Nanoseconds()
 	if r.jitter {
 		half := backoff / 2
 		backoff = half + rand.Int63n(half)
 	}
-	if try >= 1 {
-		backoff = int64(float64(backoff) * math.Pow(float64(r.backoffFactor), float64(try)))
+	if retry >= 1 {
+		backoff = int64(float64(backoff) * math.Pow(float64(r.backoffFactor), float64(retry)))
 	}
 	if maxBackoff := r.maxBackoff.Nanoseconds(); backoff > maxBackoff {
 		backoff = maxBackoff

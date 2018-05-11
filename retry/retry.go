@@ -159,7 +159,7 @@ func (r *retrier) BackoffNanos(retry int) int64 {
 		backoff = half + rand.Int63n(half)
 	}
 	if retry >= 1 {
-		backoff = int64(float64(backoff) * math.Pow(float64(r.backoffFactor), float64(retry)))
+		backoff = int64(float64(backoff) * math.Pow(r.backoffFactor, float64(retry)))
 	}
 	if maxBackoff := r.maxBackoff.Nanoseconds(); backoff > maxBackoff {
 		backoff = maxBackoff

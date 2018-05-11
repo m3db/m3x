@@ -47,9 +47,6 @@ type ContinueFn func(attempt int) bool
 
 // Retrier is a executor that can retry attempts on executing methods.
 type Retrier interface {
-	// BackoffNanos calculates the backoff for a retry in nanoseconds.
-	BackoffNanos(retry int) int64
-
 	// Attempt will attempt to perform a function with retries.
 	Attempt(fn Fn) error
 

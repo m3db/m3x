@@ -22,6 +22,7 @@ package retry
 
 import (
 	"errors"
+	"math"
 	"math/rand"
 	"time"
 
@@ -122,16 +123,8 @@ func (r *retrier) attempt(continueFn ContinueFn, fn Fn) error {
 	}
 	r.metrics.errors.Inc(1)
 
-	curr := r.initialBackoff.Nanoseconds()
 	for i := 0; r.forever || i < r.maxRetries; i++ {
-		if r.jitter {
-			half := curr / 2
-			curr = half + int64(rand.Float64()*float64(half))
-		}
-		if maxBackoff := r.maxBackoff.Nanoseconds(); curr > maxBackoff {
-			curr = maxBackoff
-		}
-		r.sleepFn(time.Duration(curr))
+		r.sleepFn(time.Duration(r.BackoffNanos(i)))
 
 		if continueFn != nil && !continueFn(attempt) {
 			return ErrWhileConditionFalse
@@ -153,9 +146,23 @@ func (r *retrier) attempt(continueFn ContinueFn, fn Fn) error {
 			return err
 		}
 		r.metrics.errors.Inc(1)
-		curr = int64(float64(curr) * r.backoffFactor)
 	}
 	r.metrics.errorsFinal.Inc(1)
 
 	return err
+}
+
+func (r *retrier) BackoffNanos(try int) int64 {
+	backoff := r.initialBackoff.Nanoseconds()
+	if r.jitter {
+		half := backoff / 2
+		backoff = half + rand.Int63n(half)
+	}
+	if try >= 1 {
+		backoff = int64(float64(backoff) * math.Pow(float64(r.backoffFactor), float64(try)))
+	}
+	if maxBackoff := r.maxBackoff.Nanoseconds(); backoff > maxBackoff {
+		backoff = maxBackoff
+	}
+	return backoff
 }

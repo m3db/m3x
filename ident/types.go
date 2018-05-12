@@ -33,10 +33,25 @@ import (
 type ID interface {
 	fmt.Stringer
 
+	// Data returns the bytes ID checked bytes.
 	Data() checked.Bytes
+
+	// Bytes returns the underlying byte slice of the bytes ID unpacked from
+	// any checked bytes container, callers cannot safely hold a ref to these
+	// bytes.
 	Bytes() []byte
+
+	// Equal returns whether the ID is equal to a given ID.
 	Equal(value ID) bool
-	Reset()
+
+	// NoFinalize makes calls to finalize a no-op, this is useful when you
+	// would like to share a type with another sub-system that should is not
+	// allowed to finalize the resource as the resource is kept indefinitely
+	// until garbage collected (i.e. longly lived).
+	NoFinalize()
+
+	// Finalize releases all resources held by the ID, unless NoFinalize has
+	// been called previously in which case this is a no-op.
 	Finalize()
 }
 
@@ -48,12 +63,25 @@ type TagValue ID
 
 // Tag represents a timeseries tag.
 type Tag struct {
-	Name  TagName
-	Value TagValue
+	Name       TagName
+	Value      TagValue
+	noFinalize bool
 }
 
-// Finalize releases all resources held by the Tag.
+// NoFinalize makes calls to finalize a no-op, this is useful when you
+// would like to share a type with another sub-system that should is not
+// allowed to finalize the resource as the resource is kept indefinitely
+// until garbage collected (i.e. longly lived).
+func (t *Tag) NoFinalize() {
+	t.noFinalize = true
+}
+
+// Finalize releases all resources held by the Tag, unless NoFinalize has
+// been called previously in which case this is a no-op.
 func (t *Tag) Finalize() {
+	if t.noFinalize {
+		return
+	}
 	if t.Name != nil {
 		t.Name.Finalize()
 		t.Name = nil

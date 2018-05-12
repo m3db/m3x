@@ -42,6 +42,26 @@ func TestConstructorEquality(t *testing.T) {
 	assert.Equal(t, a.Bytes(), b.Bytes())
 }
 
+func TestNoFinalize(t *testing.T) {
+	v := StringID("abc").(*id)
+
+	checkValid := func() {
+		require.NotNil(t, v.data)
+		assert.True(t, v.Equal(StringID("abc")))
+	}
+	checkValid()
+	assert.False(t, v.noFinalize)
+
+	v.NoFinalize()
+	checkValid()
+	assert.True(t, v.noFinalize)
+
+	for i := 0; i < 2; i++ {
+		v.Finalize()
+		checkValid()
+	}
+}
+
 func BenchmarkPooling(b *testing.B) {
 	p := NewNativePool(nil, pool.NewObjectPoolOptions())
 	ctx := context.NewContext()

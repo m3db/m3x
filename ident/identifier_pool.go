@@ -95,7 +95,6 @@ func (p *simplePool) StringID(v string) ID {
 }
 
 func (p *simplePool) Put(v ID) {
-	v.Reset()
 	p.pool.Put(v)
 }
 
@@ -275,7 +274,6 @@ func (p *nativePool) StringTag(name string, value string) Tag {
 }
 
 func (p *nativePool) Put(v ID) {
-	v.Reset()
 	p.pool.Put(v.(*id))
 }
 

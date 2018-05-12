@@ -161,6 +161,61 @@ func (s idPoolTestSuite) TestPoolStringID() {
 	s.Require().Nil(id.Data())
 }
 
+func (s idPoolTestSuite) TestPoolTags() {
+	tags := s.pool.Tags()
+	tags.Append(s.pool.StringTag("foo", "000"))
+	tags.Append(s.pool.StringTag("bar", "111"))
+	s.Require().True(tags.Equal(NewTags(
+		StringTag("foo", "000"),
+		StringTag("bar", "111"),
+	)))
+	tags.Finalize()
+	s.Require().Nil(tags.Values())
+}
+
+func (s idPoolTestSuite) TestPoolGetTagsIterator() {
+	tags := s.pool.Tags()
+	tags.Append(s.pool.StringTag("foo", "000"))
+	tags.Append(s.pool.StringTag("bar", "111"))
+
+	ctx := context.NewContext()
+	iter := s.pool.GetTagsIterator(ctx)
+	iter.Reset(tags)
+
+	s.Require().True(NewTagIterMatcher(iter).Matches(
+		NewTagsIterator(NewTags(
+			StringTag("foo", "000"),
+			StringTag("bar", "111"),
+		)),
+	))
+
+	ctx.BlockingClose()
+
+	s.Require().Nil(iter.(*tagSliceIter).backingSlice)
+	s.Require().Equal(-1, iter.(*tagSliceIter).currentIdx)
+}
+
+func (s idPoolTestSuite) TestPoolTagsIterator() {
+	tags := s.pool.Tags()
+	tags.Append(s.pool.StringTag("foo", "000"))
+	tags.Append(s.pool.StringTag("bar", "111"))
+
+	iter := s.pool.TagsIterator()
+	iter.Reset(tags)
+
+	s.Require().True(NewTagIterMatcher(iter).Matches(
+		NewTagsIterator(NewTags(
+			StringTag("foo", "000"),
+			StringTag("bar", "111"),
+		)),
+	))
+
+	iter.Close()
+
+	s.Require().Nil(iter.(*tagSliceIter).backingSlice)
+	s.Require().Equal(-1, iter.(*tagSliceIter).currentIdx)
+}
+
 func newTestSimplePool() Pool {
 	bytesPool := pool.NewCheckedBytesPool(nil, nil,
 		func(s []pool.Bucket) pool.BytesPool {

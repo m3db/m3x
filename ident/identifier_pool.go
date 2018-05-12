@@ -33,10 +33,11 @@ const (
 
 // PoolOptions is a set of pooling options.
 type PoolOptions struct {
-	IDPoolOptions   pool.ObjectPoolOptions
-	TagsPoolOptions pool.ObjectPoolOptions
-	TagsCapacity    int
-	TagsMaxCapacity int
+	IDPoolOptions           pool.ObjectPoolOptions
+	TagsPoolOptions         pool.ObjectPoolOptions
+	TagsCapacity            int
+	TagsMaxCapacity         int
+	TagsIteratorPoolOptions pool.ObjectPoolOptions
 }
 
 func (o PoolOptions) defaultsIfNotSet() PoolOptions {
@@ -49,8 +50,11 @@ func (o PoolOptions) defaultsIfNotSet() PoolOptions {
 	if o.TagsCapacity == 0 {
 		o.TagsCapacity = defaultCapacityOptions
 	}
-	if o.TagsCapacity == 0 {
+	if o.TagsMaxCapacity == 0 {
 		o.TagsMaxCapacity = defaultMaxCapacityOptions
+	}
+	if o.TagsIteratorPoolOptions == nil {
+		o.TagsIteratorPoolOptions = pool.NewObjectPoolOptions()
 	}
 	return o
 }
@@ -70,8 +74,15 @@ func NewPool(
 			Capacity:    opts.TagsCapacity,
 			MaxCapacity: opts.TagsMaxCapacity,
 		}),
+		itersPool: pool.NewObjectPool(opts.TagsIteratorPoolOptions),
 	}
-	p.pool.Init(func() interface{} { return &id{pool: p} })
+	p.pool.Init(func() interface{} {
+		return &id{pool: p}
+	})
+	p.tagArrayPool.Init()
+	p.itersPool.Init(func() interface{} {
+		return newTagSliceIter(Tags{}, p)
+	})
 
 	return p
 }
@@ -80,6 +91,7 @@ type simplePool struct {
 	bytesPool    pool.CheckedBytesPool
 	pool         pool.ObjectPool
 	tagArrayPool tagArrayPool
+	itersPool    pool.ObjectPool
 }
 
 func (p *simplePool) GetBinaryID(ctx context.Context, v checked.Bytes) ID {
@@ -131,10 +143,14 @@ func (p *simplePool) StringID(v string) ID {
 	return p.BinaryID(data)
 }
 
-func (p *simplePool) GetTags(ctx context.Context) Tags {
-	t := p.Tags()
-	ctx.RegisterFinalizer(t)
-	return t
+func (p *simplePool) GetTagsIterator(c context.Context) TagsIterator {
+	iter := p.itersPool.Get().(*tagSliceIter)
+	c.RegisterCloser(iter)
+	return iter
+}
+
+func (p *simplePool) TagsIterator() TagsIterator {
+	return p.itersPool.Get().(*tagSliceIter)
 }
 
 func (p *simplePool) Tags() Tags {
@@ -154,8 +170,12 @@ func (p *simplePool) PutTag(t Tag) {
 }
 
 func (p *simplePool) PutTags(t Tags) {
-	t.pool = p
-	t.Finalize()
+	p.tagArrayPool.Put(t.values)
+}
+
+func (p *simplePool) PutTagsIterator(iter TagsIterator) {
+	iter.Reset(Tags{})
+	p.itersPool.Put(iter)
 }
 
 func (p *simplePool) GetStringTag(ctx context.Context, name string, value string) Tag {
@@ -233,9 +253,14 @@ func NewNativePool(
 			Capacity:    opts.TagsCapacity,
 			MaxCapacity: opts.TagsMaxCapacity,
 		}),
+		itersPool: pool.NewObjectPool(opts.TagsIteratorPoolOptions),
 	}
 	p.pool.Init(func() interface{} {
 		return &id{pool: p}
+	})
+	p.tagArrayPool.Init()
+	p.itersPool.Init(func() interface{} {
+		return newTagSliceIter(Tags{}, p)
 	})
 	return p
 }
@@ -255,6 +280,7 @@ type nativePool struct {
 	pool         pool.ObjectPool
 	heap         pool.CheckedBytesPool
 	tagArrayPool tagArrayPool
+	itersPool    pool.ObjectPool
 }
 
 func configureHeap(heap pool.CheckedBytesPool) pool.CheckedBytesPool {
@@ -343,17 +369,21 @@ func (p *nativePool) StringTag(name string, value string) Tag {
 	}
 }
 
-func (p *nativePool) GetTags(ctx context.Context) Tags {
-	t := p.Tags()
-	ctx.RegisterFinalizer(t)
-	return t
-}
-
 func (p *nativePool) Tags() Tags {
 	return Tags{
 		values: p.tagArrayPool.Get(),
 		pool:   p,
 	}
+}
+
+func (p *nativePool) GetTagsIterator(c context.Context) TagsIterator {
+	iter := p.itersPool.Get().(*tagSliceIter)
+	c.RegisterCloser(iter)
+	return iter
+}
+
+func (p *nativePool) TagsIterator() TagsIterator {
+	return p.itersPool.Get().(*tagSliceIter)
 }
 
 func (p *nativePool) Put(v ID) {
@@ -366,8 +396,12 @@ func (p *nativePool) PutTag(t Tag) {
 }
 
 func (p *nativePool) PutTags(t Tags) {
-	t.pool = p
-	t.Finalize()
+	p.tagArrayPool.Put(t.values)
+}
+
+func (p *nativePool) PutTagsIterator(iter TagsIterator) {
+	iter.Reset(Tags{})
+	p.itersPool.Put(iter)
 }
 
 func (p *nativePool) Clone(existing ID) ID {

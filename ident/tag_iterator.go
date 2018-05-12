@@ -50,7 +50,14 @@ func NewTagStringsIterator(inputs ...string) (TagIterator, error) {
 
 // NewTagsIterator returns a TagsIterator over a set of tags.
 func NewTagsIterator(tags Tags) TagsIterator {
-	iter := &tagSliceIter{}
+	return newTagSliceIter(tags, nil)
+}
+
+func newTagSliceIter(
+	tags Tags,
+	pool Pool,
+) *tagSliceIter {
+	iter := &tagSliceIter{pool: pool}
 	iter.Reset(tags)
 	return iter
 }
@@ -59,6 +66,7 @@ type tagSliceIter struct {
 	backingSlice []Tag
 	currentIdx   int
 	currentTag   Tag
+	pool         Pool
 }
 
 func (i *tagSliceIter) Next() bool {
@@ -83,6 +91,12 @@ func (i *tagSliceIter) Close() {
 	i.backingSlice = nil
 	i.currentIdx = 0
 	i.currentTag = Tag{}
+
+	if i.pool == nil {
+		return
+	}
+
+	i.pool.PutTagsIterator(i)
 }
 
 func (i *tagSliceIter) Remaining() int {

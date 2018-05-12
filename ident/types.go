@@ -131,12 +131,15 @@ type Pool interface {
 	// string.
 	StringTag(name, value string) Tag
 
-	// GetTags will create a new array of tags and return it.  When the context
-	// closes the tags array and any tags contained will be finalized.
-	GetTags(ctx context.Context) Tags
-
 	// Tags will create a new array of tags and return it.
 	Tags() Tags
+
+	// GetTagsIterator will create a tag iterator and return it. When the context
+	// closes the tags array and any tags contained will be finalized.
+	GetTagsIterator(c context.Context) TagsIterator
+
+	// TagsIterator will create a tag iterator and return it.
+	TagsIterator() TagsIterator
 
 	// Put an ID back in the pool.
 	Put(id ID)
@@ -146,6 +149,9 @@ type Pool interface {
 
 	// PutTags puts a set of tags back in the pool.
 	PutTags(tags Tags)
+
+	// PutTagsIterator puts a tags iterator back in the pool.
+	PutTagsIterator(iter TagsIterator)
 
 	// Clone replicates a given ID into a pooled ID.
 	Clone(id ID) ID
@@ -210,8 +216,9 @@ type TagsIterator interface {
 
 // Tags is a collection of Tag instances that can be pooled.
 type Tags struct {
-	values []Tag
-	pool   Pool
+	values     []Tag
+	pool       Pool
+	noFinalize bool
 }
 
 // NewTags returns a new set of tags.
@@ -224,17 +231,38 @@ func (t Tags) Values() []Tag {
 	return t.values
 }
 
-// Finalize finalizes all Tags.
-func (t Tags) Finalize() {
-	for i := range t.values {
-		t.values[i].Finalize()
+// Append will append a tag.
+func (t *Tags) Append(tag Tag) {
+	t.values = append(t.values, tag)
+}
+
+// NoFinalize makes calls to finalize a no-op, this is useful when you
+// would like to share a type with another sub-system that should is not
+// allowed to finalize the resource as the resource is kept indefinitely
+// until garbage collected (i.e. longly lived).
+func (t *Tags) NoFinalize() {
+	t.noFinalize = true
+}
+
+// Finalize finalizes all Tags, unless NoFinalize has been called previously
+// in which case this is a no-op.
+func (t *Tags) Finalize() {
+	if t.noFinalize {
+		return
+	}
+
+	values := t.values
+	t.values = nil
+
+	for i := range values {
+		values[i].Finalize()
 	}
 
 	if t.pool == nil {
 		return
 	}
 
-	t.pool.PutTags(t)
+	t.pool.PutTags(Tags{values: values})
 }
 
 // Equal returns a bool indicating if the tags are equal. It requires

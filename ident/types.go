@@ -131,17 +131,30 @@ type Pool interface {
 	// string.
 	StringTag(name, value string) Tag
 
+	// GetTags will create a new array of tags and return it.  When the context
+	// closes the tags array and any tags contained will be finalized.
+	GetTags(ctx context.Context) Tags
+
+	// Tags will create a new array of tags and return it.
+	Tags() Tags
+
 	// Put an ID back in the pool.
 	Put(id ID)
 
 	// PutTag puts a tag back in the pool.
 	PutTag(tag Tag)
 
+	// PutTags puts a set of tags back in the pool.
+	PutTags(tags Tags)
+
 	// Clone replicates a given ID into a pooled ID.
 	Clone(id ID) ID
 
 	// CloneTag replicates a given Tag into a pooled Tag.
 	CloneTag(tag Tag) Tag
+
+	// CloneTags replicates a given set of Tags into a pooled Tags.
+	CloneTags(tags Tags) Tags
 }
 
 // Iterator represents an iterator over `ID` instances. It is not thread-safe.
@@ -186,44 +199,53 @@ type TagIterator interface {
 	Duplicate() TagIterator
 }
 
-// TagSliceIterator represents a TagIterator that can be reset with a slice
-// of tags.  It is not thread-safe.
-type TagSliceIterator interface {
+// TagsIterator represents a TagIterator that can be reset with a Tags
+// collection type. It is not thread-safe.
+type TagsIterator interface {
 	TagIterator
 
 	// Reset allows the tag iterator to be reused with a new set of tags.
 	Reset(tags Tags)
 }
 
-// IDs is a collection of ID instances.
-type IDs []ID
-
-// Finalize finalizes all IDs.
-func (ids IDs) Finalize() {
-	for _, id := range ids {
-		id.Finalize()
-	}
+// Tags is a collection of Tag instances that can be pooled.
+type Tags struct {
+	values []Tag
+	pool   Pool
 }
 
-// Tags is a collection of Tag instances.
-type Tags []Tag
+// NewTags returns a new set of tags.
+func NewTags(values ...Tag) Tags {
+	return Tags{values: values}
+}
+
+// Values returns the tags values.
+func (t Tags) Values() []Tag {
+	return t.values
+}
 
 // Finalize finalizes all Tags.
-func (tags Tags) Finalize() {
-	for i := range tags {
-		t := tags[i]
-		t.Finalize()
+func (t Tags) Finalize() {
+	for i := range t.values {
+		t.values[i].Finalize()
 	}
+
+	if t.pool == nil {
+		return
+	}
+
+	t.pool.PutTags(t)
 }
 
 // Equal returns a bool indicating if the tags are equal. It requires
 // the two slices are ordered the same.
-func (tags Tags) Equal(other Tags) bool {
-	if len(tags) != len(other) {
+func (t Tags) Equal(other Tags) bool {
+	if len(t.Values()) != len(other.Values()) {
 		return false
 	}
-	for i := 0; i < len(tags); i++ {
-		equal := tags[i].Name.Equal(other[i].Name) && tags[i].Value.Equal(other[i].Value)
+	for i := 0; i < len(t.Values()); i++ {
+		equal := t.values[i].Name.Equal(other.values[i].Name) &&
+			t.values[i].Value.Equal(other.values[i].Value)
 		if !equal {
 			return false
 		}

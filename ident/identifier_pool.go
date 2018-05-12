@@ -26,14 +26,50 @@ import (
 	"github.com/m3db/m3x/pool"
 )
 
+const (
+	defaultCapacityOptions    = 16
+	defaultMaxCapacityOptions = 32
+)
+
+// PoolOptions is a set of pooling options.
+type PoolOptions struct {
+	IDPoolOptions   pool.ObjectPoolOptions
+	TagsPoolOptions pool.ObjectPoolOptions
+	TagsCapacity    int
+	TagsMaxCapacity int
+}
+
+func (o PoolOptions) defaultsIfNotSet() PoolOptions {
+	if o.IDPoolOptions == nil {
+		o.IDPoolOptions = pool.NewObjectPoolOptions()
+	}
+	if o.TagsPoolOptions == nil {
+		o.TagsPoolOptions = pool.NewObjectPoolOptions()
+	}
+	if o.TagsCapacity == 0 {
+		o.TagsCapacity = defaultCapacityOptions
+	}
+	if o.TagsCapacity == 0 {
+		o.TagsMaxCapacity = defaultMaxCapacityOptions
+	}
+	return o
+}
+
 // NewPool constructs a new simple Pool.
 func NewPool(
 	bytesPool pool.CheckedBytesPool,
-	options pool.ObjectPoolOptions,
+	opts PoolOptions,
 ) Pool {
+	opts = opts.defaultsIfNotSet()
+
 	p := &simplePool{
 		bytesPool: bytesPool,
-		pool:      pool.NewObjectPool(options),
+		pool:      pool.NewObjectPool(opts.IDPoolOptions),
+		tagArrayPool: newTagArrayPool(tagArrayPoolOpts{
+			Options:     opts.TagsPoolOptions,
+			Capacity:    opts.TagsCapacity,
+			MaxCapacity: opts.TagsMaxCapacity,
+		}),
 	}
 	p.pool.Init(func() interface{} { return &id{pool: p} })
 
@@ -41,8 +77,9 @@ func NewPool(
 }
 
 type simplePool struct {
-	bytesPool pool.CheckedBytesPool
-	pool      pool.ObjectPool
+	bytesPool    pool.CheckedBytesPool
+	pool         pool.ObjectPool
+	tagArrayPool tagArrayPool
 }
 
 func (p *simplePool) GetBinaryID(ctx context.Context, v checked.Bytes) ID {
@@ -94,6 +131,19 @@ func (p *simplePool) StringID(v string) ID {
 	return p.BinaryID(data)
 }
 
+func (p *simplePool) GetTags(ctx context.Context) Tags {
+	t := p.Tags()
+	ctx.RegisterFinalizer(t)
+	return t
+}
+
+func (p *simplePool) Tags() Tags {
+	return Tags{
+		values: p.tagArrayPool.Get(),
+		pool:   p,
+	}
+}
+
 func (p *simplePool) Put(v ID) {
 	p.pool.Put(v)
 }
@@ -101,6 +151,11 @@ func (p *simplePool) Put(v ID) {
 func (p *simplePool) PutTag(t Tag) {
 	p.Put(t.Name)
 	p.Put(t.Value)
+}
+
+func (p *simplePool) PutTags(t Tags) {
+	t.pool = p
+	t.Finalize()
 }
 
 func (p *simplePool) GetStringTag(ctx context.Context, name string, value string) Tag {
@@ -149,21 +204,35 @@ func (p *simplePool) CloneTag(t Tag) Tag {
 	}
 }
 
+func (p *simplePool) CloneTags(t Tags) Tags {
+	tags := p.tagArrayPool.Get()[:0]
+	for _, tag := range t.Values() {
+		tags = append(tags, p.CloneTag(tag))
+	}
+	return Tags{
+		values: tags,
+		pool:   p,
+	}
+}
+
 // NewNativePool constructs a new NativePool.
 func NewNativePool(
 	heap pool.CheckedBytesPool,
-	opts pool.ObjectPoolOptions,
+	opts PoolOptions,
 ) Pool {
-	if opts == nil {
-		opts = pool.NewObjectPoolOptions()
-	}
+	opts = opts.defaultsIfNotSet()
 
-	iopts := opts.InstrumentOptions()
+	iopts := opts.IDPoolOptions.InstrumentOptions()
 
 	p := &nativePool{
-		pool: pool.NewObjectPool(opts.SetInstrumentOptions(
+		pool: pool.NewObjectPool(opts.IDPoolOptions.SetInstrumentOptions(
 			iopts.SetMetricsScope(iopts.MetricsScope().SubScope("id-pool")))),
 		heap: configureHeap(heap),
+		tagArrayPool: newTagArrayPool(tagArrayPoolOpts{
+			Options:     opts.TagsPoolOptions,
+			Capacity:    opts.TagsCapacity,
+			MaxCapacity: opts.TagsMaxCapacity,
+		}),
 	}
 	p.pool.Init(func() interface{} {
 		return &id{pool: p}
@@ -183,8 +252,9 @@ type nativePool struct {
 	// In the future we could potentially craft a special `checked.Bytes` that
 	// has no references to anything itself and can be pooled by the
 	// `pool.NativePool` itself too.
-	pool pool.ObjectPool
-	heap pool.CheckedBytesPool
+	pool         pool.ObjectPool
+	heap         pool.CheckedBytesPool
+	tagArrayPool tagArrayPool
 }
 
 func configureHeap(heap pool.CheckedBytesPool) pool.CheckedBytesPool {
@@ -273,6 +343,19 @@ func (p *nativePool) StringTag(name string, value string) Tag {
 	}
 }
 
+func (p *nativePool) GetTags(ctx context.Context) Tags {
+	t := p.Tags()
+	ctx.RegisterFinalizer(t)
+	return t
+}
+
+func (p *nativePool) Tags() Tags {
+	return Tags{
+		values: p.tagArrayPool.Get(),
+		pool:   p,
+	}
+}
+
 func (p *nativePool) Put(v ID) {
 	p.pool.Put(v.(*id))
 }
@@ -280,6 +363,11 @@ func (p *nativePool) Put(v ID) {
 func (p *nativePool) PutTag(t Tag) {
 	p.Put(t.Name)
 	p.Put(t.Value)
+}
+
+func (p *nativePool) PutTags(t Tags) {
+	t.pool = p
+	t.Finalize()
 }
 
 func (p *nativePool) Clone(existing ID) ID {
@@ -303,5 +391,16 @@ func (p *nativePool) CloneTag(t Tag) Tag {
 	return Tag{
 		Name:  p.Clone(t.Name),
 		Value: p.Clone(t.Value),
+	}
+}
+
+func (p *nativePool) CloneTags(t Tags) Tags {
+	tags := p.tagArrayPool.Get()[:0]
+	for _, tag := range t.Values() {
+		tags = append(tags, p.CloneTag(tag))
+	}
+	return Tags{
+		values: tags,
+		pool:   p,
 	}
 }

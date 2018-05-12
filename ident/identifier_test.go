@@ -25,7 +25,6 @@ import (
 
 	"github.com/m3db/m3x/checked"
 	"github.com/m3db/m3x/context"
-	"github.com/m3db/m3x/pool"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -63,7 +62,7 @@ func TestNoFinalize(t *testing.T) {
 }
 
 func BenchmarkPooling(b *testing.B) {
-	p := NewNativePool(nil, pool.NewObjectPoolOptions())
+	p := NewNativePool(nil, PoolOptions{})
 	ctx := context.NewContext()
 
 	v := checked.NewBytes([]byte{'a', 'b', 'c'}, nil)

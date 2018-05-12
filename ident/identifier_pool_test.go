@@ -39,7 +39,7 @@ func TestSimpleIDPool(t *testing.T) {
 
 func TestNativeIDPool(t *testing.T) {
 	s := &idPoolTestSuite{
-		pool: NewNativePool(nil, pool.NewObjectPoolOptions()),
+		pool: NewNativePool(nil, PoolOptions{}),
 	}
 	suite.Run(t, s)
 }
@@ -167,5 +167,5 @@ func newTestSimplePool() Pool {
 			return pool.NewBytesPool(s, nil)
 		})
 	bytesPool.Init()
-	return NewPool(bytesPool, pool.NewObjectPoolOptions())
+	return NewPool(bytesPool, PoolOptions{})
 }

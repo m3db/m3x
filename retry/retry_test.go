@@ -213,7 +213,7 @@ func TestBackoffValidResult(t *testing.T) {
 		},
 		gen.IntRange(-100, 1000),
 		gen.Bool(),
-		gen.Float64Range(-100, 1000),
+		gen.Float64Range(0, 1000),
 		gen.Int64Range(0, math.MaxInt64),
 		gen.Int64Range(0, math.MaxInt64),
 	))

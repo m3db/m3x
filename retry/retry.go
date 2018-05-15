@@ -162,10 +162,11 @@ func BackoffNanos(
 ) int64 {
 	backoff := initialBackoff.Nanoseconds()
 	if retry >= 1 {
-		backoff = int64(float64(backoff) * math.Pow(backoffFactor, float64(retry-1)))
-	}
-	if backoff < 0 {
-		return maxBackoff.Nanoseconds()
+		backoffFloat64 := float64(backoff) * math.Pow(backoffFactor, float64(retry-1))
+		if backoffFloat64 > math.MaxInt64 {
+			return maxBackoff.Nanoseconds()
+		}
+		backoff = int64(backoffFloat64)
 	}
 	// Validate the value of backoff to make sure Int63n() does not panic.
 	if jitter && backoff >= 2 {

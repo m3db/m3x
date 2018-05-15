@@ -71,6 +71,8 @@ type Tag struct {
 // until garbage collected (i.e. longly lived).
 func (t *Tag) NoFinalize() {
 	t.noFinalize = true
+	t.Name.NoFinalize()
+	t.Value.NoFinalize()
 }
 
 // Finalize releases all resources held by the Tag, unless NoFinalize has
@@ -239,6 +241,9 @@ func (t *Tags) Append(tag Tag) {
 // until garbage collected (i.e. longly lived).
 func (t *Tags) NoFinalize() {
 	t.noFinalize = true
+	for _, tag := range t.values {
+		tag.NoFinalize()
+	}
 }
 
 // Finalize finalizes all Tags, unless NoFinalize has been called previously

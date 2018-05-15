@@ -33,9 +33,6 @@ import (
 type ID interface {
 	fmt.Stringer
 
-	// Data returns the bytes ID checked bytes.
-	Data() checked.Bytes
-
 	// Bytes returns the underlying byte slice of the bytes ID unpacked from
 	// any checked bytes container, callers cannot safely hold a ref to these
 	// bytes.

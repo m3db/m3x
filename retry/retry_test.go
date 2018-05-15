@@ -200,17 +200,16 @@ func TestRetryForever(t *testing.T) {
 	assert.Equal(t, time.Duration(1023*time.Second), totalSlept)
 }
 
-func TestBackoffNoPanic(t *testing.T) {
+func TestBackoffValidResult(t *testing.T) {
 	seed := time.Now().UnixNano()
 	parameters := gopter.DefaultTestParameters()
 	parameters.Rng = rand.New(rand.NewSource(seed))
 	parameters.MinSuccessfulTests = 10000
 	props := gopter.NewProperties(parameters)
 
-	props.Property("No panic", prop.ForAll(
+	props.Property("Valid result", prop.ForAll(
 		func(retry int, jitter bool, backoffFactor float64, initialBackoff, maxBackoff int64) bool {
-			BackoffNanos(retry, jitter, backoffFactor, time.Duration(initialBackoff), time.Duration(maxBackoff))
-			return true
+			return BackoffNanos(retry, jitter, backoffFactor, time.Duration(initialBackoff), time.Duration(maxBackoff)) >= 0
 		},
 		gen.IntRange(-100, 1000),
 		gen.Bool(),

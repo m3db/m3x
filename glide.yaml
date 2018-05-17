@@ -5,7 +5,7 @@ import:
   version: ^1.0.0
 
 - package: github.com/uber-go/tally
-  version: ^3.3.4
+  version: 6a1d68e2ac2e88e0cf89c453eddd19c2859cbb4b
 
 - package: github.com/uber-go/zap
   version: ^1.0.0

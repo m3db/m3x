@@ -1,10 +1,14 @@
-hash: 07f357051ce456ed153f01ce3e4466fcf75ab3fb468e8b04442e3b1e413b9560
-updated: 2018-05-17T00:14:44.851098-04:00
+hash: 85d46b8df05c6c59c6692822558688b5fbdc54e59c59009af85f272b33fb31d2
+updated: 2018-05-17T10:54:52.150263-04:00
 imports:
 - name: github.com/apache/thrift
   version: 9549b25c77587b29be4e0b5c258221a4ed85d37a
   subpackages:
   - lib/go/thrift
+- name: github.com/beorn7/perks
+  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  subpackages:
+  - quantile
 - name: github.com/cespare/xxhash
   version: 48099fad606eafc26e3a569fad19ff510fff4df6
 - name: github.com/davecgh/go-spew
@@ -25,7 +29,7 @@ imports:
   - prometheus
   - prometheus/promhttp
 - name: github.com/m3db/prometheus_client_model
-  version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
+  version: 8b2299a4bf7d7fc10835527021716d4b4a6e8700
   subpackages:
   - go
 - name: github.com/m3db/prometheus_common
@@ -40,10 +44,6 @@ imports:
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
-- name: github.com/beorn7/perks
-  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
-  subpackages:
-  - quantile
 - name: github.com/mauricelam/genny
   version: 9d8700bcc567cd22ea2ef42ce5835a9c80296c4a
   subpackages:
@@ -63,12 +63,13 @@ imports:
 - name: github.com/uber-go/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: github.com/uber-go/tally
-  version: 51e5c45d670c9ff0dfefd5bdd72903631f013d0c
+  version: 6a1d68e2ac2e88e0cf89c453eddd19c2859cbb4b
   subpackages:
   - m3
   - m3/customtransports
   - m3/thrift
   - m3/thriftudp
+  - multi
   - prometheus
 - name: github.com/uber-go/zap
   version: eeedf312bc6c57391d84767a4cd413f02a917974

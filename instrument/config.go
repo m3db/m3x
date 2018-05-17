@@ -27,12 +27,12 @@ import (
 
 	"github.com/uber-go/tally"
 	"github.com/uber-go/tally/m3"
+	"github.com/uber-go/tally/multi"
 	"github.com/uber-go/tally/prometheus"
 )
 
 var (
-	errNoReporterConfigured        = errors.New("no reporter configured")
-	errMultipleReportersConfigured = errors.New("multiple reporters configured")
+	errNoReporterConfigured = errors.New("no reporter configured")
 )
 
 // ScopeConfiguration configures a metric scope.
@@ -71,28 +71,33 @@ type MetricsConfiguration struct {
 // NewRootScope creates a new tally.Scope based on a tally.CachedStatsReporter
 // based on the the the config.
 func (mc *MetricsConfiguration) NewRootScope() (tally.Scope, io.Closer, error) {
-	var r tally.CachedStatsReporter
-	switch {
-	case mc.M3Reporter == nil && mc.PrometheusReporter == nil:
-		return nil, nil, errNoReporterConfigured
-	case mc.M3Reporter != nil && mc.PrometheusReporter != nil:
-		return nil, nil, errMultipleReportersConfigured
-	case mc.M3Reporter != nil:
-		var err error
-		r, err = mc.M3Reporter.NewReporter()
+	var reporters []tally.CachedStatsReporter
+	if mc.M3Reporter != nil {
+		r, err := mc.M3Reporter.NewReporter()
 		if err != nil {
 			return nil, nil, err
 		}
-	case mc.PrometheusReporter != nil:
-		var (
-			opts prometheus.ConfigurationOptions
-			err  error
-		)
-		r, err = mc.PrometheusReporter.NewReporter(opts)
-		if err != nil {
-			return nil, nil, err
-		}
+		reporters = append(reporters, r)
 	}
+	if mc.PrometheusReporter != nil {
+		var opts prometheus.ConfigurationOptions
+		r, err := mc.PrometheusReporter.NewReporter(opts)
+		if err != nil {
+			return nil, nil, err
+		}
+		reporters = append(reporters, r)
+	}
+	if len(reporters) == 0 {
+		return nil, nil, errNoReporterConfigured
+	}
+
+	var r tally.CachedStatsReporter
+	if len(reporters) == 1 {
+		r = reporters[0]
+	} else {
+		r = multi.NewMultiCachedReporter(reporters...)
+	}
+
 	scope, closer := mc.NewRootScopeReporter(r)
 	return scope, closer, nil
 }

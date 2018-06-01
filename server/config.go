@@ -29,7 +29,7 @@ import (
 
 // Configuration configs a server.
 type Configuration struct {
-	// Msgpack server listening address.
+	// Server listening address.
 	ListenAddress string `yaml:"listenAddress" validate:"nonzero"`
 
 	// Retry mechanism configuration.

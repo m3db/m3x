@@ -26,6 +26,7 @@ import (
 
 	"github.com/m3db/m3x/instrument"
 	"github.com/m3db/m3x/retry"
+
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 )

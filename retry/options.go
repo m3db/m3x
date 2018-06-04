@@ -45,7 +45,7 @@ type options struct {
 	maxRetries     int
 	forever        bool
 	jitter         bool
-	int63Fn        Int63nFn
+	rngFn          RngFn
 }
 
 // NewOptions creates new retry options.
@@ -58,7 +58,7 @@ func NewOptions() Options {
 		maxRetries:     defaultMaxRetries,
 		forever:        defaultForever,
 		jitter:         defaultJitter,
-		int63Fn:        rand.Int63n,
+		rngFn:          rand.Int63n,
 	}
 }
 
@@ -132,12 +132,12 @@ func (o *options) Jitter() bool {
 	return o.jitter
 }
 
-func (o *options) SetInt63nFn(value Int63nFn) Options {
+func (o *options) SetRngFn(value RngFn) Options {
 	opts := *o
-	opts.int63Fn = value
+	opts.rngFn = value
 	return &opts
 }
 
-func (o *options) Int63nFn() Int63nFn {
-	return o.int63Fn
+func (o *options) RngFn() RngFn {
+	return o.rngFn
 }

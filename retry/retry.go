@@ -43,7 +43,7 @@ type retrier struct {
 	maxRetries     int
 	forever        bool
 	jitter         bool
-	int63nFn       Int63nFn
+	rngFn          RngFn
 	sleepFn        func(t time.Duration)
 	metrics        retrierMetrics
 }
@@ -79,7 +79,7 @@ func NewRetrier(opts Options) Retrier {
 		maxRetries:     opts.MaxRetries(),
 		forever:        opts.Forever(),
 		jitter:         opts.Jitter(),
-		int63nFn:       opts.Int63nFn(),
+		rngFn:          opts.RngFn(),
 		sleepFn:        time.Sleep,
 		metrics: retrierMetrics{
 			success:            scope.Counter("success"),
@@ -131,7 +131,7 @@ func (r *retrier) attempt(continueFn ContinueFn, fn Fn) error {
 			r.backoffFactor,
 			r.initialBackoff,
 			r.maxBackoff,
-			r.int63nFn,
+			r.rngFn,
 		)))
 
 		if continueFn != nil && !continueFn(attempt) {
@@ -167,7 +167,7 @@ func BackoffNanos(
 	backoffFactor float64,
 	initialBackoff time.Duration,
 	maxBackoff time.Duration,
-	int63nFn Int63nFn,
+	rngFn RngFn,
 ) int64 {
 	backoff := initialBackoff.Nanoseconds()
 	if retry >= 1 {
@@ -181,7 +181,7 @@ func BackoffNanos(
 	// Validate the value of backoff to make sure Int63n() does not panic.
 	if jitter && backoff >= 2 {
 		half := backoff / 2
-		backoff = half + int63nFn(half)
+		backoff = half + rngFn(half)
 	}
 	if maxBackoff := maxBackoff.Nanoseconds(); backoff > maxBackoff {
 		backoff = maxBackoff

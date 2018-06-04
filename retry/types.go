@@ -39,8 +39,8 @@ func NonRetryableError(err error) error {
 	return errors.NewNonRetryableError(err)
 }
 
-// Int63nFn returns a non-negative pseudo-random number in [0,n).
-type Int63nFn func(n int64) int64
+// RngFn returns a non-negative pseudo-random number in [0,n).
+type RngFn func(n int64) int64
 
 // Fn is a function that can be retried.
 type Fn func() error
@@ -105,9 +105,9 @@ type Options interface {
 	// backoff when moving to next attempt.
 	Jitter() bool
 
-	// SetInt63nFn sets the Int63nFn.
-	SetInt63nFn(value Int63nFn) Options
+	// SetRngFn sets the RngFn.
+	SetRngFn(value RngFn) Options
 
-	// Int63nFn returns the Int63nFn.
-	Int63nFn() Int63nFn
+	// RngFn returns the RngFn.
+	RngFn() RngFn
 }

@@ -21,7 +21,7 @@
 package sync
 
 const (
-	defaultNumShards             = 10
+	defaultNumShards             = 2 ^ 4
 	defaultKillWorkerProbability = 0.0001
 	defaultRandSeed              = int64(1337)
 )

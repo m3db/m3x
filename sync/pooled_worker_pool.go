@@ -28,15 +28,10 @@ import (
 
 type pooledWorkerPool struct {
 	sync.Mutex
-	workChs               []chan workerInstruction
+	workChs               []chan Work
 	numShards             int64
 	killWorkerProbability float64
 	nowFn                 NowFn
-}
-
-type workerInstruction struct {
-	work      Work
-	shouldDie bool
 }
 
 // NewPooledWorkerPool creates a new worker pool.
@@ -50,9 +45,9 @@ func NewPooledWorkerPool(size int, opts PooledWorkerPoolOptions) (PooledWorkerPo
 		numShards = int64(size)
 	}
 
-	workChs := make([]chan workerInstruction, numShards)
+	workChs := make([]chan Work, numShards)
 	for i := range workChs {
-		workChs[i] = make(chan workerInstruction, int64(size)/numShards)
+		workChs[i] = make(chan Work, int64(size)/numShards)
 	}
 
 	return &pooledWorkerPool{
@@ -72,19 +67,17 @@ func (p *pooledWorkerPool) Init() {
 }
 
 func (p *pooledWorkerPool) Go(work Work) {
-	instruction := workerInstruction{work: work}
-
 	// Use time.Now() to avoid excessive synchronization
 	workChIdx := p.nowFn().Unix() % p.numShards
 	workCh := p.workChs[workChIdx]
-	workCh <- instruction
+	workCh <- work
 }
 
-func (p *pooledWorkerPool) spawnWorker(workCh chan workerInstruction) {
+func (p *pooledWorkerPool) spawnWorker(workCh chan Work) {
 	go func() {
 		rng := rand.New(rand.NewSource(p.nowFn().Unix()))
-		for instruction := range workCh {
-			instruction.work()
+		for f := range workCh {
+			f()
 			if rng.Float64() < p.killWorkerProbability {
 				p.spawnWorker(workCh)
 				return

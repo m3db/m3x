@@ -27,15 +27,15 @@ const (
 	defaultNumShards = 10
 )
 
-// Var for testing purposes
 var (
+	// Var for testing purposes
 	defaultKillWorkerProbability = 0.0001
 )
 
 // PooledWorkerPool provides a pool for goroutines, but unlike WorkerPool,
 // the actual goroutines themselves are re-used. This can be useful from a
-// performance perspective in scenarios where the allocating and growing the
-// new goroutine stack can become a bottleneck.
+// performance perspective in scenarios where the allocation and growth of
+// the new goroutine and its stack is a bottleneck.
 //
 // In order to prevent abnormally large goroutine stacks from persisting over
 // the life-cycle of an application, the PooledWorkerPool will randomly kill

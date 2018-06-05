@@ -23,6 +23,7 @@ package sync
 const (
 	defaultNumShards             = 10
 	defaultKillWorkerProbability = 0.0001
+	defaultRandSeed              = int64(1337)
 )
 
 // NewPooledWorkerPoolOptions returns a new PooledWorkerPoolOptions with default options
@@ -30,12 +31,14 @@ func NewPooledWorkerPoolOptions() PooledWorkerPoolOptions {
 	return &pooledWorkerPoolOptions{
 		numShards:             defaultNumShards,
 		killWorkerProbability: defaultKillWorkerProbability,
+		randSeed:              defaultRandSeed,
 	}
 }
 
 type pooledWorkerPoolOptions struct {
 	numShards             int
 	killWorkerProbability float64
+	randSeed              int64
 }
 
 func (o *pooledWorkerPoolOptions) SetNumShards(value int) PooledWorkerPoolOptions {
@@ -56,4 +59,14 @@ func (o *pooledWorkerPoolOptions) SetKillWorkerProbability(value float64) Pooled
 
 func (o *pooledWorkerPoolOptions) KillWorkerProbability() float64 {
 	return o.killWorkerProbability
+}
+
+func (o *pooledWorkerPoolOptions) SetRandSeed(value int64) PooledWorkerPoolOptions {
+	opts := *o
+	opts.randSeed = value
+	return &opts
+}
+
+func (o *pooledWorkerPoolOptions) RandSeed() int64 {
+	return o.randSeed
 }

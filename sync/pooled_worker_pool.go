@@ -26,6 +26,7 @@ type pooledWorkerPool struct {
 	workChs               []chan workerInstruction
 	numShards             int
 	killWorkerProbability float64
+	rand                  *rand.Rand
 }
 
 type workerInstruction struct {
@@ -49,6 +50,7 @@ func NewPooledWorkerPool(size int, opts PooledWorkerPoolOptions) PooledWorkerPoo
 		workChs:               workChs,
 		numShards:             numShards,
 		killWorkerProbability: opts.KillWorkerProbability(),
+		rand: rand.New(rand.NewSource(opts.RandSeed())),
 	}
 }
 
@@ -62,7 +64,7 @@ func (p *pooledWorkerPool) Init() {
 
 func (p *pooledWorkerPool) Go(work Work) {
 	instruction := workerInstruction{work: work}
-	randVal := rand.Float64()
+	randVal := p.rand.Float64()
 	killWorker := randVal < p.killWorkerProbability
 	instruction.shouldDie = killWorker
 

@@ -78,4 +78,10 @@ type PooledWorkerPoolOptions interface {
 
 	// KillWorkerProbability returns the probability to kill a worker.
 	KillWorkerProbability() float64
+
+	// SetRandSeed sets the seed for the random number generator.
+	SetRandSeed(value int64) PooledWorkerPoolOptions
+
+	// RandSeed returns the seed for the random number generator.
+	RandSeed() int64
 }

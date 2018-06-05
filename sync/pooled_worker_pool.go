@@ -20,9 +20,13 @@
 
 package sync
 
-import "math/rand"
+import (
+	"math/rand"
+	"sync"
+)
 
 type pooledWorkerPool struct {
+	sync.Mutex
 	workChs               []chan workerInstruction
 	numShards             int
 	killWorkerProbability float64
@@ -64,7 +68,7 @@ func (p *pooledWorkerPool) Init() {
 
 func (p *pooledWorkerPool) Go(work Work) {
 	instruction := workerInstruction{work: work}
-	randVal := p.rand.Float64()
+	randVal := p.getRandFloat64()
 	killWorker := randVal < p.killWorkerProbability
 	instruction.shouldDie = killWorker
 
@@ -73,13 +77,9 @@ func (p *pooledWorkerPool) Go(work Work) {
 	// 		randVal = 0.14
 	// 		int(0.14 * float64(10)) = 1
 	// 		1 % 10 == 1
-	workChIdx := int((randVal * float64(p.numShards))) % p.numShards
+	workChIdx := p.rand.Intn(p.numShards)
 	workCh := p.workChs[workChIdx]
 	workCh <- instruction
-
-	if killWorker {
-		p.spawnWorker(workCh)
-	}
 }
 
 func (p *pooledWorkerPool) spawnWorker(workCh chan workerInstruction) {
@@ -87,8 +87,16 @@ func (p *pooledWorkerPool) spawnWorker(workCh chan workerInstruction) {
 		for instruction := range workCh {
 			instruction.work()
 			if instruction.shouldDie {
+				p.spawnWorker(workCh)
 				return
 			}
 		}
 	}()
+}
+
+func (p *pooledWorkerPool) getRandFloat64() float64 {
+	p.Lock()
+	f := p.rand.Float64()
+	p.Unlock()
+	return f
 }

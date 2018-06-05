@@ -31,7 +31,8 @@ import (
 func TestPooledWorkerPoolGo(t *testing.T) {
 	var count uint32
 
-	p := NewPooledWorkerPool(testWorkerPoolSize, NewPooledWorkerPoolOptions())
+	p, err := NewPooledWorkerPool(testWorkerPoolSize, NewPooledWorkerPoolOptions())
+	require.NoError(t, err)
 	p.Init()
 
 	var wg sync.WaitGroup
@@ -50,11 +51,12 @@ func TestPooledWorkerPoolGo(t *testing.T) {
 func TestPooledWorkerPoolGoKillWorker(t *testing.T) {
 	var count uint32
 
-	p := NewPooledWorkerPool(
+	p, err := NewPooledWorkerPool(
 		testWorkerPoolSize,
 		NewPooledWorkerPoolOptions().
 			SetKillWorkerProbability(1.0),
 	)
+	require.NoError(t, err)
 	p.Init()
 
 	var wg sync.WaitGroup
@@ -68,4 +70,9 @@ func TestPooledWorkerPoolGoKillWorker(t *testing.T) {
 	wg.Wait()
 
 	require.Equal(t, uint32(testWorkerPoolSize*2), count)
+}
+
+func TestPooledWorkerPoolSizeTooSmall(t *testing.T) {
+	_, err := NewPooledWorkerPool(0, NewPooledWorkerPoolOptions())
+	require.Error(t, err)
 }

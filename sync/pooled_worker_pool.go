@@ -21,6 +21,7 @@
 package sync
 
 import (
+	"fmt"
 	"math/rand"
 	"sync"
 )
@@ -39,7 +40,11 @@ type workerInstruction struct {
 }
 
 // NewPooledWorkerPool creates a new worker pool.
-func NewPooledWorkerPool(size int, opts PooledWorkerPoolOptions) PooledWorkerPool {
+func NewPooledWorkerPool(size int, opts PooledWorkerPoolOptions) (PooledWorkerPool, error) {
+	if size <= 0 {
+		return nil, fmt.Errorf("pooled worker pool size too small: %d", size)
+	}
+
 	numShards := opts.NumShards()
 	if size < numShards {
 		numShards = size
@@ -55,7 +60,7 @@ func NewPooledWorkerPool(size int, opts PooledWorkerPoolOptions) PooledWorkerPoo
 		numShards:             numShards,
 		killWorkerProbability: opts.KillWorkerProbability(),
 		rand: rand.New(rand.NewSource(opts.RandSeed())),
-	}
+	}, nil
 }
 
 func (p *pooledWorkerPool) Init() {

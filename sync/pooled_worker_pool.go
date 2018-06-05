@@ -18,45 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package sync implements synchronization facililites such as worker pools.
 package sync
 
 import "math/rand"
 
-const (
-	defaultNumShards = 10
-)
-
-var (
-	// Var for testing purposes
-	defaultKillWorkerProbability = 0.0001
-)
-
-// PooledWorkerPool provides a pool for goroutines, but unlike WorkerPool,
-// the actual goroutines themselves are re-used. This can be useful from a
-// performance perspective in scenarios where the allocation and growth of
-// the new goroutine and its stack is a bottleneck. Specifically, if the
-// work function being performed has a very deep call-stack, calls to
-// runtime.morestack can dominate the workload. Re-using existing goroutines
-// allows the stack to be grown once, and then re-used for many invocations.
-//
-// In order to prevent abnormally large goroutine stacks from persisting over
-// the life-cycle of an application, the PooledWorkerPool will randomly kill
-// existing goroutines and spawn a new one.
-//
-// The PooledWorkerPool also implements sharding of its underlying worker channels
-// to prevent excessive lock contention.
-type PooledWorkerPool interface {
-	// Init initializes the pool.
-	Init()
-
-	// Go waits until the next worker becomes available and executes it.
-	Go(work Work)
-}
-
 type pooledWorkerPool struct {
-	workChs   []chan workerInstruction
-	numShards int
+	workChs               []chan workerInstruction
+	numShards             int
+	killWorkerProbability float64
 }
 
 type workerInstruction struct {
@@ -65,8 +34,8 @@ type workerInstruction struct {
 }
 
 // NewPooledWorkerPool creates a new worker pool.
-func NewPooledWorkerPool(size int) PooledWorkerPool {
-	numShards := defaultNumShards
+func NewPooledWorkerPool(size int, opts PooledWorkerPoolOptions) PooledWorkerPool {
+	numShards := opts.NumShards()
 	if size < numShards {
 		numShards = size
 	}
@@ -77,8 +46,9 @@ func NewPooledWorkerPool(size int) PooledWorkerPool {
 	}
 
 	return &pooledWorkerPool{
-		workChs:   workChs,
-		numShards: numShards,
+		workChs:               workChs,
+		numShards:             numShards,
+		killWorkerProbability: opts.KillWorkerProbability(),
 	}
 }
 
@@ -93,7 +63,7 @@ func (p *pooledWorkerPool) Init() {
 func (p *pooledWorkerPool) Go(work Work) {
 	instruction := workerInstruction{work: work}
 	randVal := rand.Float64()
-	killWorker := randVal < defaultKillWorkerProbability
+	killWorker := randVal < p.killWorkerProbability
 	instruction.shouldDie = killWorker
 
 	// Pick an index based on the random value. Example:

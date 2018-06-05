@@ -25,27 +25,6 @@ import (
 	"time"
 )
 
-// Work is a unit of item to be worked on.
-type Work func()
-
-// WorkerPool provides a pool for goroutines.
-type WorkerPool interface {
-	// Init initializes the pool.
-	Init()
-
-	// Go waits until the next worker becomes available and executes it.
-	Go(work Work)
-
-	// GoIfAvailable performs the work inside a worker if one is available and
-	// returns true, or false otherwise.
-	GoIfAvailable(work Work) bool
-
-	// GoWithTimeout waits up to the given timeout for a worker to become
-	// available, returning true if a worker becomes available, or false
-	// otherwise
-	GoWithTimeout(work Work, timeout time.Duration) bool
-}
-
 type workerPool struct {
 	workCh chan struct{}
 }

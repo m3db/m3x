@@ -20,52 +20,40 @@
 
 package sync
 
-import (
-	"sync"
-	"sync/atomic"
-	"testing"
-
-	"github.com/stretchr/testify/require"
+const (
+	defaultNumShards             = 10
+	defaultKillWorkerProbability = 0.0001
 )
 
-func TestPooledWorkerPoolGo(t *testing.T) {
-	var count uint32
-
-	p := NewPooledWorkerPool(testWorkerPoolSize, NewPooledWorkerPoolOptions())
-	p.Init()
-
-	var wg sync.WaitGroup
-	for i := 0; i < testWorkerPoolSize*2; i++ {
-		wg.Add(1)
-		p.Go(func() {
-			atomic.AddUint32(&count, 1)
-			wg.Done()
-		})
+// NewPooledWorkerPoolOptions returns a new PooledWorkerPoolOptions with default options
+func NewPooledWorkerPoolOptions() PooledWorkerPoolOptions {
+	return &pooledWorkerPoolOptions{
+		numShards:             defaultNumShards,
+		killWorkerProbability: defaultKillWorkerProbability,
 	}
-	wg.Wait()
-
-	require.Equal(t, uint32(testWorkerPoolSize*2), count)
 }
 
-func TestPooledWorkerPoolGoKillWorker(t *testing.T) {
-	var count uint32
+type pooledWorkerPoolOptions struct {
+	numShards             int
+	killWorkerProbability float64
+}
 
-	p := NewPooledWorkerPool(
-		testWorkerPoolSize,
-		NewPooledWorkerPoolOptions().
-			SetKillWorkerProbability(1.0),
-	)
-	p.Init()
+func (o *pooledWorkerPoolOptions) SetNumShards(value int) PooledWorkerPoolOptions {
+	opts := *o
+	opts.numShards = value
+	return &opts
+}
 
-	var wg sync.WaitGroup
-	for i := 0; i < testWorkerPoolSize*2; i++ {
-		wg.Add(1)
-		p.Go(func() {
-			atomic.AddUint32(&count, 1)
-			wg.Done()
-		})
-	}
-	wg.Wait()
+func (o *pooledWorkerPoolOptions) NumShards() int {
+	return o.numShards
+}
 
-	require.Equal(t, uint32(testWorkerPoolSize*2), count)
+func (o *pooledWorkerPoolOptions) SetKillWorkerProbability(value float64) PooledWorkerPoolOptions {
+	opts := *o
+	opts.killWorkerProbability = value
+	return &opts
+}
+
+func (o *pooledWorkerPoolOptions) KillWorkerProbability() float64 {
+	return o.killWorkerProbability
 }

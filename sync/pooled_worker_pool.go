@@ -75,6 +75,7 @@ func (p *pooledWorkerPool) Go(work Work) {
 
 func (p *pooledWorkerPool) spawnWorker(workCh chan Work) {
 	go func() {
+		// RNG per worker to avoid synchronization.
 		rng := rand.New(rand.NewSource(p.nowFn().Unix()))
 		for f := range workCh {
 			f()

@@ -35,7 +35,10 @@ var (
 // PooledWorkerPool provides a pool for goroutines, but unlike WorkerPool,
 // the actual goroutines themselves are re-used. This can be useful from a
 // performance perspective in scenarios where the allocation and growth of
-// the new goroutine and its stack is a bottleneck.
+// the new goroutine and its stack is a bottleneck. Specifically, if the
+// work function being performed has a very deep call-stack, calls to
+// runtime.morestack can dominate the workload. Re-using existing goroutines
+// allows the stack to be grown once, and then re-used for many invocations.
 //
 // In order to prevent abnormally large goroutine stacks from persisting over
 // the life-cycle of an application, the PooledWorkerPool will randomly kill

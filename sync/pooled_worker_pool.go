@@ -39,7 +39,7 @@ var (
 //
 // In order to prevent abnormally large goroutine stacks from persisting over
 // the life-cycle of an application, the PooledWorkerPool will randomly kill
-// existing goroutines and spawn a new one instead of re-using an existing one.
+// existing goroutines and spawn a new one.
 //
 // The PooledWorkerPool also implements sharding of its underlying worker channels
 // to prevent excessive lock contention.

@@ -29,9 +29,9 @@ import (
 type pooledWorkerPool struct {
 	sync.Mutex
 	workChs               []chan workerInstruction
-	numShards             int
+	numShards             int64
 	killWorkerProbability float64
-	rand                  *rand.Rand
+	nowFn                 NowFn
 }
 
 type workerInstruction struct {
@@ -46,20 +46,20 @@ func NewPooledWorkerPool(size int, opts PooledWorkerPoolOptions) (PooledWorkerPo
 	}
 
 	numShards := opts.NumShards()
-	if size < numShards {
-		numShards = size
+	if int64(size) < numShards {
+		numShards = int64(size)
 	}
 
 	workChs := make([]chan workerInstruction, numShards)
 	for i := range workChs {
-		workChs[i] = make(chan workerInstruction, size/numShards)
+		workChs[i] = make(chan workerInstruction, int64(size)/numShards)
 	}
 
 	return &pooledWorkerPool{
 		workChs:               workChs,
 		numShards:             numShards,
 		killWorkerProbability: opts.KillWorkerProbability(),
-		rand: rand.New(rand.NewSource(opts.RandSeed())),
+		nowFn: opts.NowFn(),
 	}, nil
 }
 
@@ -73,35 +73,22 @@ func (p *pooledWorkerPool) Init() {
 
 func (p *pooledWorkerPool) Go(work Work) {
 	instruction := workerInstruction{work: work}
-	randVal := p.getRandFloat64()
-	killWorker := randVal < p.killWorkerProbability
-	instruction.shouldDie = killWorker
 
-	// Pick an index based on the random value. Example:
-	// 		numShards = 10
-	// 		randVal = 0.14
-	// 		int(0.14 * float64(10)) = 1
-	// 		1 % 10 == 1
-	workChIdx := p.rand.Intn(p.numShards)
+	// Use time.Now() to avoid excessive synchronization
+	workChIdx := p.nowFn().Unix() % p.numShards
 	workCh := p.workChs[workChIdx]
 	workCh <- instruction
 }
 
 func (p *pooledWorkerPool) spawnWorker(workCh chan workerInstruction) {
 	go func() {
+		rng := rand.New(rand.NewSource(p.nowFn().Unix()))
 		for instruction := range workCh {
 			instruction.work()
-			if instruction.shouldDie {
+			if rng.Float64() < p.killWorkerProbability {
 				p.spawnWorker(workCh)
 				return
 			}
 		}
 	}()
-}
-
-func (p *pooledWorkerPool) getRandFloat64() float64 {
-	p.Lock()
-	f := p.rand.Float64()
-	p.Unlock()
-	return f
 }

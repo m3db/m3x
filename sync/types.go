@@ -68,10 +68,10 @@ type WorkerPool interface {
 // PooledWorkerPoolOptions is the options for a PooledWorkerPool.
 type PooledWorkerPoolOptions interface {
 	// SetNumShards sets the number of worker channel shards.
-	SetNumShards(value int) PooledWorkerPoolOptions
+	SetNumShards(value int64) PooledWorkerPoolOptions
 
 	// NumShards returns the number of worker channel shards.
-	NumShards() int
+	NumShards() int64
 
 	// SetKillWorkerProbability sets the probability to kill a worker.
 	SetKillWorkerProbability(value float64) PooledWorkerPoolOptions
@@ -79,9 +79,9 @@ type PooledWorkerPoolOptions interface {
 	// KillWorkerProbability returns the probability to kill a worker.
 	KillWorkerProbability() float64
 
-	// SetRandSeed sets the seed for the random number generator.
-	SetRandSeed(value int64) PooledWorkerPoolOptions
+	// SetNowFn sets the now function.
+	SetNowFn(value NowFn) PooledWorkerPoolOptions
 
-	// RandSeed returns the seed for the random number generator.
-	RandSeed() int64
+	// NowFn returns the now function.
+	NowFn() NowFn
 }

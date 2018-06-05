@@ -20,34 +20,42 @@
 
 package sync
 
+import "time"
+
 const (
-	defaultNumShards             = 2 ^ 4
+	defaultNumShards             = int64(2 ^ 4)
 	defaultKillWorkerProbability = 0.0001
-	defaultRandSeed              = int64(1337)
 )
+
+var (
+	defaultNowFn = time.Now
+)
+
+// NowFn is a function that returns the current time.
+type NowFn func() time.Time
 
 // NewPooledWorkerPoolOptions returns a new PooledWorkerPoolOptions with default options
 func NewPooledWorkerPoolOptions() PooledWorkerPoolOptions {
 	return &pooledWorkerPoolOptions{
 		numShards:             defaultNumShards,
 		killWorkerProbability: defaultKillWorkerProbability,
-		randSeed:              defaultRandSeed,
+		nowFn: defaultNowFn,
 	}
 }
 
 type pooledWorkerPoolOptions struct {
-	numShards             int
+	numShards             int64
 	killWorkerProbability float64
-	randSeed              int64
+	nowFn                 NowFn
 }
 
-func (o *pooledWorkerPoolOptions) SetNumShards(value int) PooledWorkerPoolOptions {
+func (o *pooledWorkerPoolOptions) SetNumShards(value int64) PooledWorkerPoolOptions {
 	opts := *o
 	opts.numShards = value
 	return &opts
 }
 
-func (o *pooledWorkerPoolOptions) NumShards() int {
+func (o *pooledWorkerPoolOptions) NumShards() int64 {
 	return o.numShards
 }
 
@@ -61,12 +69,12 @@ func (o *pooledWorkerPoolOptions) KillWorkerProbability() float64 {
 	return o.killWorkerProbability
 }
 
-func (o *pooledWorkerPoolOptions) SetRandSeed(value int64) PooledWorkerPoolOptions {
+func (o *pooledWorkerPoolOptions) SetNowFn(value NowFn) PooledWorkerPoolOptions {
 	opts := *o
-	opts.randSeed = value
+	opts.nowFn = value
 	return &opts
 }
 
-func (o *pooledWorkerPoolOptions) RandSeed() int64 {
-	return o.randSeed
+func (o *pooledWorkerPoolOptions) NowFn() NowFn {
+	return o.nowFn
 }

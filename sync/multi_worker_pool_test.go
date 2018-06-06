@@ -38,8 +38,8 @@ func TestGetRoutine(t *testing.T) {
 
 	var multiWg sync.WaitGroup
 	for pool := 0; pool < multiTestWorkerPoolSize*2; pool++ {
+		multiWg.Add(1)
 		go func() {
-			multiWg.Add(1)
 			p := multi.GetPool()
 			var wg sync.WaitGroup
 			for i := 0; i < testWorkerPoolSize*2; i++ {

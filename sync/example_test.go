@@ -167,15 +167,15 @@ func ExampleMultiWorkerPool() {
 		log.Fatal(err)
 	}
 
-	for _, r := range responses {
+	for i, r := range responses {
 		total := 0
 		for _, response := range r {
 			total += response.a
 		}
-		fmt.Printf("Total is %v\n", total)
+		fmt.Printf("Total for process %v is %v\n", i, total)
 	}
 
-	// Output: Total is 36
-	// Total is 72
-	// Total is 108
+	// Output: Total for process 0 is 36
+	// Total for process 1 is 72
+	// Total for process 2 is 108
 }

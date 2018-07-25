@@ -20,7 +20,9 @@
 
 package ident
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	errInvalidNumberInputsToIteratorMatcher = errors.New("inputs must be specified in name-value pairs (i.e. divisible by 2)")

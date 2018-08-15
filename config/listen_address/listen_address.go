@@ -89,7 +89,7 @@ func (c Configuration) Resolve() (string, error) {
 			return "", err
 		}
 	default:
-		return "", fmt.Errorf("unknown host ID resolver: resolver=%s",
+		return "", fmt.Errorf("unknown port type: resolver=%s",
 			string(p.PortType))
 	}
 

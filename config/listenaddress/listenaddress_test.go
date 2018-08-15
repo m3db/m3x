@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	port     = "9000"
+	port     = 9000
 	hostname = "0.0.0.0"
 )
 
@@ -77,6 +77,24 @@ func TestEnvironmentVariableResolver(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "0.0.0.0:9000", value)
+}
+
+func TestInvalidEnvironmentVariableResolver(t *testing.T) {
+	varName := "PORT_ENV_NAME"
+	expected := "foo"
+
+	require.NoError(t, os.Setenv(varName, expected))
+
+	cfg := Configuration{
+		Hostname: hostname,
+		Port: &Port{
+			PortType:   EnvironmentResolver,
+			EnvVarName: &varName,
+		},
+	}
+
+	_, err := cfg.Resolve()
+	require.Error(t, err)
 }
 
 func TestEnvironmentResolverErrorWhenNameMissing(t *testing.T) {

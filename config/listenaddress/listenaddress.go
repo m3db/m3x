@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 // Resolver is a type of port resolver
@@ -54,7 +55,7 @@ type Port struct {
 	PortType Resolver `yaml:"portType" validate:"nonzero"`
 
 	// Value is the config specified port if using config port type.
-	Value *string `yaml:"value"`
+	Value *int `yaml:"value"`
 
 	// EnvVarName is the environment specified port if using environment port type.
 	EnvVarName *string `yaml:"envVarName"`
@@ -67,7 +68,7 @@ func (c Configuration) Resolve() (string, error) {
 	}
 	p := c.Port
 
-	var port string
+	var port int
 	switch p.PortType {
 	case ConfigResolver:
 		if p.Value == nil {
@@ -82,9 +83,11 @@ func (c Configuration) Resolve() (string, error) {
 				string(p.PortType))
 			return "", err
 		}
-		port = os.Getenv(*p.EnvVarName)
-		if port == "" {
-			err := fmt.Errorf("missing port env var value using: resolver=%s, name=%s",
+		portStr := os.Getenv(*p.EnvVarName)
+		var err error
+		port, err = strconv.Atoi(portStr)
+		if err != nil {
+			err := fmt.Errorf("invalid port env var value using: resolver=%s, name=%s",
 				string(p.PortType), *p.EnvVarName)
 			return "", err
 		}
@@ -93,5 +96,5 @@ func (c Configuration) Resolve() (string, error) {
 			string(p.PortType))
 	}
 
-	return fmt.Sprintf("%s:%s", c.Hostname, port), nil
+	return fmt.Sprintf("%s:%d", c.Hostname, port), nil
 }

@@ -45,23 +45,23 @@ const (
 
 // Configuration is the configuration for resolving a listen address.
 type Configuration struct {
-	// PortType is the port type for the port
-	PortType Resolver `yaml:"portType" validate:"nonzero"`
+	// ListenAddressType is the port type for the port
+	ListenAddressType Resolver `yaml:"type" validate:"nonzero"`
 
 	// Value is the config specified listen address if using config port type.
 	Value *string `yaml:"value"`
 
-	// EnvListenPort specifies the environment variable name for the listen address port.
-	EnvListenPort *string `yaml:"envListenPort"`
+	// EnvVarListenPort specifies the environment variable name for the listen address port.
+	EnvVarListenPort *string `yaml:"envVarListenPort"`
 
-	// EnvListenPort specifies the environment variable name for the listen address hostname.
-	EnvListenHost *string `yaml:"envListenHost"`
+	// EnvVarListenHost specifies the environment variable name for the listen address hostname.
+	EnvVarListenHost *string `yaml:"envVarListenHost"`
 }
 
 // Resolve returns the resolved listen address given the configuration.
 func (c Configuration) Resolve() (string, error) {
 
-	portType := c.PortType
+	portType := c.ListenAddressType
 
 	var listenAddress string
 	switch portType {
@@ -75,23 +75,23 @@ func (c Configuration) Resolve() (string, error) {
 
 	case EnvironmentResolver:
 		// environment variable for port is required
-		if c.EnvListenPort == nil {
+		if c.EnvVarListenPort == nil {
 			err := fmt.Errorf("missing port env var name using: resolver=%s",
 				string(portType))
 			return "", err
 		}
-		portStr := os.Getenv(*c.EnvListenPort)
+		portStr := os.Getenv(*c.EnvVarListenPort)
 		port, err := strconv.Atoi(portStr)
 		if err != nil {
 			err := fmt.Errorf("invalid port env var value using: resolver=%s, name=%s",
-				string(portType), *c.EnvListenPort)
+				string(portType), *c.EnvVarListenPort)
 			return "", err
 		}
 		// if environment variable for hostname is not set, use the default
-		if c.EnvListenHost == nil {
+		if c.EnvVarListenHost == nil {
 			listenAddress = fmt.Sprintf("%s:%d", defaultHostname, port)
 		} else {
-			envHost := os.Getenv(*c.EnvListenHost)
+			envHost := os.Getenv(*c.EnvVarListenHost)
 			listenAddress = fmt.Sprintf("%s:%d", envHost, port)
 		}
 

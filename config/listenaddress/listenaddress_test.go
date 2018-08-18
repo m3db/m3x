@@ -33,15 +33,13 @@ import (
 var (
 	envListenPort = "ENV_LISTEN_PORT"
 	envListenHost = "ENV_LISTEN_HOST"
-	port          = 9000
-	hostname      = "0.0.0.0"
 	defaultListen = "0.0.0.0:9000"
 )
 
 func TestListenAddressResolver(t *testing.T) {
 	cfg := Configuration{
-		PortType: ConfigResolver,
-		Value:    &defaultListen,
+		ListenAddressType: ConfigResolver,
+		Value:             &defaultListen,
 	}
 
 	value, err := cfg.Resolve()
@@ -52,7 +50,7 @@ func TestListenAddressResolver(t *testing.T) {
 
 func TestConfigResolverErrorWhenMissing(t *testing.T) {
 	cfg := Configuration{
-		PortType: ConfigResolver,
+		ListenAddressType: ConfigResolver,
 	}
 
 	_, err := cfg.Resolve()
@@ -65,8 +63,8 @@ func TestEnvironmentVariableResolverWithDefault(t *testing.T) {
 	require.NoError(t, os.Setenv(envListenPort, envPort))
 
 	cfg := Configuration{
-		PortType:      EnvironmentResolver,
-		EnvListenPort: &envListenPort,
+		ListenAddressType: EnvironmentResolver,
+		EnvVarListenPort:  &envListenPort,
 	}
 
 	value, err := cfg.Resolve()
@@ -83,9 +81,9 @@ func TestEnvironmentVariableResolver(t *testing.T) {
 	require.NoError(t, os.Setenv(envListenHost, envHost))
 
 	cfg := Configuration{
-		PortType:      EnvironmentResolver,
-		EnvListenPort: &envListenPort,
-		EnvListenHost: &envListenHost,
+		ListenAddressType: EnvironmentResolver,
+		EnvVarListenPort:  &envListenPort,
+		EnvVarListenHost:  &envListenHost,
 	}
 
 	value, err := cfg.Resolve()
@@ -101,8 +99,8 @@ func TestInvalidEnvironmentVariableResolver(t *testing.T) {
 	require.NoError(t, os.Setenv(varName, expected))
 
 	cfg := Configuration{
-		PortType:      EnvironmentResolver,
-		EnvListenPort: &varName,
+		ListenAddressType: EnvironmentResolver,
+		EnvVarListenPort:  &varName,
 	}
 
 	_, err := cfg.Resolve()
@@ -111,7 +109,7 @@ func TestInvalidEnvironmentVariableResolver(t *testing.T) {
 
 func TestEnvironmentResolverErrorWhenNameMissing(t *testing.T) {
 	cfg := Configuration{
-		PortType: EnvironmentResolver,
+		ListenAddressType: EnvironmentResolver,
 	}
 
 	_, err := cfg.Resolve()
@@ -122,8 +120,8 @@ func TestEnvironmentResolverErrorWhenValueMissing(t *testing.T) {
 	varName := "OTHER_LISTEN_ENV_PORT"
 
 	cfg := Configuration{
-		PortType:      EnvironmentResolver,
-		EnvListenPort: &varName,
+		ListenAddressType: EnvironmentResolver,
+		EnvVarListenPort:  &varName,
 	}
 
 	_, err := cfg.Resolve()
@@ -132,7 +130,7 @@ func TestEnvironmentResolverErrorWhenValueMissing(t *testing.T) {
 
 func TestUnknownResolverError(t *testing.T) {
 	cfg := Configuration{
-		PortType: "some-unknown-resolver",
+		ListenAddressType: "some-unknown-resolver",
 	}
 
 	_, err := cfg.Resolve()

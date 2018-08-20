@@ -61,14 +61,14 @@ type Configuration struct {
 // Resolve returns the resolved listen address given the configuration.
 func (c Configuration) Resolve() (string, error) {
 
-	portType := c.ListenAddressType
+	listenAddrType := c.ListenAddressType
 
 	var listenAddress string
-	switch portType {
+	switch listenAddrType {
 	case ConfigResolver:
 		if c.Value == nil {
-			err := fmt.Errorf("missing port type using: resolver=%s",
-				string(portType))
+			err := fmt.Errorf("missing listen address value using: resolver=%s",
+				string(listenAddrType))
 			return "", err
 		}
 		listenAddress = *c.Value
@@ -77,14 +77,14 @@ func (c Configuration) Resolve() (string, error) {
 		// environment variable for port is required
 		if c.EnvVarListenPort == nil {
 			err := fmt.Errorf("missing port env var name using: resolver=%s",
-				string(portType))
+				string(listenAddrType))
 			return "", err
 		}
 		portStr := os.Getenv(*c.EnvVarListenPort)
 		port, err := strconv.Atoi(portStr)
 		if err != nil {
 			err := fmt.Errorf("invalid port env var value using: resolver=%s, name=%s",
-				string(portType), *c.EnvVarListenPort)
+				string(listenAddrType), *c.EnvVarListenPort)
 			return "", err
 		}
 		// if environment variable for hostname is not set, use the default
@@ -96,8 +96,8 @@ func (c Configuration) Resolve() (string, error) {
 		}
 
 	default:
-		return "", fmt.Errorf("unknown port type: resolver=%s",
-			string(portType))
+		return "", fmt.Errorf("unknown listen address type: resolver=%s",
+			string(listenAddrType))
 	}
 
 	return listenAddress, nil

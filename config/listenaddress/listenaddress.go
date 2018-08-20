@@ -60,7 +60,6 @@ type Configuration struct {
 
 // Resolve returns the resolved listen address given the configuration.
 func (c Configuration) Resolve() (string, error) {
-
 	listenAddrType := c.ListenAddressType
 
 	var listenAddress string

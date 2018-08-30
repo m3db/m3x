@@ -89,3 +89,93 @@ func ExampleWorkerPool() {
 	fmt.Printf("Total is %v", total)
 	// Output: Total is 36
 }
+
+func ExampleMultiWorkerPool() {
+	var (
+		errorCh      = make(chan error, 1)
+		processWg    sync.WaitGroup
+		workers      = xsync.NewMultiWorkerPool(2, 3)
+		numProcesses = 3
+		numRequests  = 9
+		responses    = make([][]response, numProcesses)
+	)
+
+	for i := 0; i < numProcesses; i++ {
+		responses[i] = make([]response, numRequests)
+	}
+
+	// Initialise the multi worker pool
+	workers.Init()
+	processWg.Add(numProcesses)
+
+	for process := 0; process < numProcesses; process++ {
+		//Capture loop variable.
+		process := process
+
+		// Start a request per process
+		go func() {
+			// Get a worker pool
+			pool := workers.GetPool()
+
+			// Spin up a wait group per process
+			var wg sync.WaitGroup
+			wg.Add(numRequests)
+			for i := 0; i < numRequests; i++ {
+				// Capture loop variable.
+				i := i
+
+				// Execute request on worker pool.
+				pool.Go(func() {
+					defer wg.Done()
+
+					var err error
+
+					// Perform some work which may fail.
+					resp := response{a: i * (process + 1)}
+
+					if err != nil {
+						// Return the first error that is encountered.
+						select {
+						case errorCh <- err:
+						default:
+						}
+
+						return
+					}
+
+					// Can concurrently modify responses since each iteration updates a
+					// different index.
+					responses[process][i] = resp
+				})
+			}
+			// Wait for all requests to finish.
+			wg.Wait()
+
+			// Return pool to worker pool
+			workers.PutPool(pool)
+
+			// Wait for all process requests to finish.
+			processWg.Done()
+		}()
+	}
+
+	// Wait for all process requests to finish.
+	processWg.Wait()
+
+	close(errorCh)
+	if err := <-errorCh; err != nil {
+		log.Fatal(err)
+	}
+
+	for i, r := range responses {
+		total := 0
+		for _, response := range r {
+			total += response.a
+		}
+		fmt.Printf("Total for process %v is %v\n", i, total)
+	}
+
+	// Output: Total for process 0 is 36
+	// Total for process 1 is 72
+	// Total for process 2 is 108
+}

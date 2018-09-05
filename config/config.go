@@ -25,8 +25,8 @@ import (
 	"errors"
 	"io/ioutil"
 
-	validator "gopkg.in/validator.v2"
-	yaml "gopkg.in/yaml.v2"
+	"github.com/go-validator/validator"
+	"github.com/go-yaml/yaml"
 )
 
 var errNoFilesToLoad = errors.New("attempt to load config with no files")

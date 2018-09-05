@@ -1,5 +1,5 @@
-hash: 45cff4f7627fe2d7f7dc304dc0d72b5f184de6a429606b4377aadf4d8921d238
-updated: 2018-05-18T11:27:03.115560906-04:00
+hash: e088ae5c05fce5b4da3af44f441d052fec58b304096c431fc91423c7c877e6e1
+updated: 2018-09-04T19:53:32.270857-04:00
 imports:
 - name: github.com/apache/thrift
   version: 9549b25c77587b29be4e0b5c258221a4ed85d37a
@@ -15,6 +15,10 @@ imports:
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
   - spew
+- name: github.com/go-validator/validator
+  version: 3e4f037f12a1221a0864cf0dd2e81c452ab22448
+- name: github.com/go-yaml/yaml
+  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 - name: github.com/golang/mock
   version: c34cdb4725f4c3844d095133c6e40e448b86589b
   subpackages:
@@ -62,7 +66,7 @@ imports:
 - name: github.com/spaolacci/murmur3
   version: 9f5d223c60793748f04a9d5b4b4eacddfc1f755d
 - name: github.com/stretchr/testify
-  version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
+  version: f35b8ab0b5a2cef36673838d662e249dd9c94686
   subpackages:
   - assert
   - require
@@ -79,7 +83,7 @@ imports:
   - multi
   - prometheus
 - name: github.com/uber-go/zap
-  version: eeedf312bc6c57391d84767a4cd413f02a917974
+  version: ff33455a0e382e8a81d14dd7c922020b6b5e7982
 - name: go.uber.org/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: go.uber.org/multierr
@@ -96,10 +100,6 @@ imports:
   version: 0ed95abb35c445290478a5348a7b38bb154135fd
   subpackages:
   - context
-- name: gopkg.in/validator.v2
-  version: 3e4f037f12a1221a0864cf0dd2e81c452ab22448
-- name: gopkg.in/yaml.v2
-  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 testImports:
 - name: github.com/fortytw2/leaktest
   version: a5ef70473c97b71626b9abeda80ee92ba2a7de9e

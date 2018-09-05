@@ -26,8 +26,8 @@ import (
 
 	"github.com/m3db/m3x/instrument"
 
+	"github.com/go-yaml/yaml"
 	"github.com/stretchr/testify/require"
-	yaml "gopkg.in/yaml.v2"
 )
 
 func TestServerConfiguration(t *testing.T) {

@@ -197,9 +197,11 @@ func (p *simplePool) Clone(existing ID) ID {
 		return existing
 	}
 
-	id := p.pool.Get().(*id)
-	data := existing.Bytes()
-	newData := p.bytesPool.Get(len(data))
+	var (
+		id      = p.pool.Get().(*id)
+		data    = existing.Bytes()
+		newData = p.bytesPool.Get(len(data))
+	)
 	newData.IncRef()
 	newData.AppendAll(data)
 

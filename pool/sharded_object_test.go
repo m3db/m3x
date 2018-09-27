@@ -176,26 +176,24 @@ func TestPoolStress(t *testing.T) {
 // goos: darwin
 // goarch: amd64
 // pkg: github.com/m3db/m3x/pool
-// BenchmarkObjectPoolGetPut        	20000000	        89.7 ns/op
-// BenchmarkObjectPoolGetPut-2      	20000000	        88.9 ns/op
-// BenchmarkObjectPoolGetPut-4      	20000000	        88.8 ns/op
-// BenchmarkShardedPoolGetPut       	20000000	        89.0 ns/op
-// BenchmarkShardedPoolGetPut-2     	20000000	        89.7 ns/op
-// BenchmarkShardedPoolGetPut-4     	20000000	        89.5 ns/op
-// BenchmarkShardedPoolPutGet       	50000000	        37.0 ns/op
-// BenchmarkShardedPoolPutGet-2     	100000000	        18.9 ns/op
-// BenchmarkShardedPoolPutGet-4     	100000000	        15.8 ns/op
-// BenchmarkChannelPoolPutGet       	20000000	        92.1 ns/op
-// BenchmarkChannelPoolPutGet-2     	10000000	       145 ns/op
-// BenchmarkChannelPoolPutGet-4     	10000000	       167 ns/op
-// BenchmarkShardedPoolOverflow     	  200000	      5807 ns/op
-// BenchmarkShardedPoolOverflow-2   	  500000	      2986 ns/op
-// BenchmarkShardedPoolOverflow-4   	  500000	      2525 ns/op
-// BenchmarkChannelPoolOverflow     	  200000	      5821 ns/op
-// BenchmarkChannelPoolOverflow-2   	  500000	      3012 ns/op
-// BenchmarkChannelPoolOverflow-4   	  500000	      2581 ns/op
-// PASS
-// ok  	github.com/m3db/m3x/pool	30.338s
+// BenchmarkObjectPoolGetPut                	10000000	       111 ns/op
+// BenchmarkObjectPoolGetPut-2              	20000000	       102 ns/op
+// BenchmarkObjectPoolGetPut-4              	20000000	        93.9 ns/op
+// BenchmarkShardedPoolGetPut               	20000000	        93.4 ns/op
+// BenchmarkShardedPoolGetPut-2             	20000000	        90.6 ns/op
+// BenchmarkShardedPoolGetPut-4             	20000000	        91.3 ns/op
+// BenchmarkShardedPoolConcurrentGetPut     	50000000	        38.0 ns/op
+// BenchmarkShardedPoolConcurrentGetPut-2   	100000000	        20.4 ns/op
+// BenchmarkShardedPoolConcurrentGetPut-4   	100000000	        16.3 ns/op
+// BenchmarkChannelPoolConcurrentGetPut     	20000000	        91.0 ns/op
+// BenchmarkChannelPoolConcurrentGetPut-2   	10000000	       142 ns/op
+// BenchmarkChannelPoolConcurrentGetPut-4   	10000000	       175 ns/op
+// BenchmarkShardedPoolOverflow             	  300000	      5866 ns/op
+// BenchmarkShardedPoolOverflow-2           	  500000	      3979 ns/op
+// BenchmarkShardedPoolOverflow-4           	  500000	      2783 ns/op
+// BenchmarkChannelPoolOverflow             	  200000	      5852 ns/op
+// BenchmarkChannelPoolOverflow-2           	  500000	      3233 ns/op
+// BenchmarkChannelPoolOverflow-4           	  500000	      2669 ns/op
 
 func BenchmarkShardedPoolGetPut(b *testing.B) {
 	opts := NewObjectPoolOptions().SetSize(1)

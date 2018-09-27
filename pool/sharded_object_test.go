@@ -172,19 +172,6 @@ func TestPoolStress(t *testing.T) {
 }
 */
 
-func BenchmarkShardedPoolGetPut(b *testing.B) {
-	opts := NewObjectPoolOptions().SetSize(1)
-	pool := NewObjectPool(opts)
-	pool.Init(func() interface{} {
-		return 1
-	})
-
-	for n := 0; n < b.N; n++ {
-		o := pool.Get()
-		pool.Put(o)
-	}
-}
-
 // ❯ go test -bench=Pool -cpu 1,2,4 -run '^$' ./pool
 // goos: darwin
 // goarch: amd64
@@ -210,7 +197,20 @@ func BenchmarkShardedPoolGetPut(b *testing.B) {
 // PASS
 // ok  	github.com/m3db/m3x/pool	30.338s
 
-func BenchmarkShardedPoolPutGet(b *testing.B) {
+func BenchmarkShardedPoolGetPut(b *testing.B) {
+	opts := NewObjectPoolOptions().SetSize(1)
+	pool := NewObjectPool(opts)
+	pool.Init(func() interface{} {
+		return 1
+	})
+
+	for n := 0; n < b.N; n++ {
+		o := pool.Get()
+		pool.Put(o)
+	}
+}
+
+func BenchmarkShardedPoolConcurrentGetPut(b *testing.B) {
 	p := NewShardedObjectPool(nil)
 	p.Init(func() interface{} {
 		return 0
@@ -225,7 +225,7 @@ func BenchmarkShardedPoolPutGet(b *testing.B) {
 		}
 	})
 }
-func BenchmarkChannelPoolPutGet(b *testing.B) {
+func BenchmarkChannelPoolConcurrentGetPut(b *testing.B) {
 	p := NewObjectPool(nil)
 	p.Init(func() interface{} {
 		return 0

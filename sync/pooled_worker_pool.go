@@ -67,16 +67,12 @@ func (p *pooledWorkerPool) Init() {
 }
 
 func (p *pooledWorkerPool) Go(work Work) {
-	// Use time.Now() to avoid excessive synchronization
-	workChIdx := p.nowFn().UnixNano() % p.numShards
-	workCh := p.workChs[workChIdx]
+	workCh := p.selectWorkCh()
 	workCh <- work
 }
 
 func (p *pooledWorkerPool) GoOrGrow(work Work) {
-	// Use time.Now() to avoid excessive synchronization
-	workChIdx := p.nowFn().UnixNano() % p.numShards
-	workCh := p.workChs[workChIdx]
+	workCh := p.selectWorkCh()
 	select {
 	case workCh <- work:
 	default:
@@ -93,6 +89,12 @@ func (p *pooledWorkerPool) GoOrGrow(work Work) {
 		// before killing themselves.
 		p.spawnWorker(work, workCh, false)
 	}
+}
+
+func (p *pooledWorkerPool) selectWorkCh() chan Work {
+	// Use time.Now() to avoid excessive synchronization
+	workChIdx := p.nowFn().UnixNano() % p.numShards
+	return p.workChs[workChIdx]
 }
 
 func (p *pooledWorkerPool) spawnWorker(

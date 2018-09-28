@@ -83,10 +83,10 @@ func (p *pooledWorkerPool) GoOrGrow(work Work) {
 		// If the queue for the worker we were assigned to is full,
 		// allocate a new goroutine to do the work and then
 		// assign it to be a temporary additional worker for the queue.
-		// This allows the worker pool to accomodate "bursts" of
+		// This allows the worker pool to accommodate "bursts" of
 		// traffic. Also, it reduces the need for operators to tune the size
 		// of the pool for a given workload. If the pool is initially
-		// sized too small, it will eventually grow to accomodate the
+		// sized too small, it will eventually grow to accommodate the
 		// workload, and if the workload decreases the killWorkerProbability
 		// will slowly shrink the pool back down to its original size because
 		// workers created in this manner will not spawn their replacement

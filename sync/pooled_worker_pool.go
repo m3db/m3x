@@ -24,10 +24,16 @@ import (
 	"fmt"
 	"math/rand"
 	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/uber-go/tally"
 )
 
 type pooledWorkerPool struct {
 	sync.Mutex
+	numRoutinesAtomic     int64
+	numRoutinesGauge      tally.Gauge
 	growOnDemand          bool
 	workChs               []chan Work
 	numShards             int64
@@ -52,6 +58,8 @@ func NewPooledWorkerPool(size int, opts PooledWorkerPoolOptions) (PooledWorkerPo
 	}
 
 	return &pooledWorkerPool{
+		numRoutinesAtomic:     0,
+		numRoutinesGauge:      opts.InstrumentOptions().MetricsScope().Gauge("num-routines"),
 		growOnDemand:          opts.GrowOnDemand(),
 		workChs:               workChs,
 		numShards:             numShards,
@@ -115,4 +123,23 @@ func (p *pooledWorkerPool) spawnWorker(
 			}
 		}
 	}()
+}
+
+func (p *pooledWorkerPool) reportLoop() {
+	for {
+		time.Sleep(time.Second)
+		p.numRoutinesGauge.Set(p.getNumRoutines())
+	}
+}
+
+func (p *pooledWorkerPool) incNumRoutines() {
+	atomic.AddInt64(&p.numRoutinesAtomic, 1)
+}
+
+func (p *pooledWorkerPool) decNumRoutines() {
+	atomic.AddInt64(&p.numRoutinesAtomic, -1)
+}
+
+func (p *pooledWorkerPool) getNumRoutines() int64 {
+	return atomic.LoadInt64(&p.numRoutinesAtomic)
 }

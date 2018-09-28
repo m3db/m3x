@@ -20,7 +20,11 @@
 
 package sync
 
-import "time"
+import (
+	"time"
+
+	"github.com/m3db/m3x/instrument"
+)
 
 // Work is a unit of item to be worked on.
 type Work func()
@@ -100,4 +104,10 @@ type PooledWorkerPoolOptions interface {
 
 	// NowFn returns the now function.
 	NowFn() NowFn
+
+	// SetInstrumentOptions sets the instrument options.
+	SetInstrumentOptions(value instrument.Options) PooledWorkerPoolOptions
+
+	// InstrumentOptions returns the now function.
+	InstrumentOptions() instrument.Options
 }

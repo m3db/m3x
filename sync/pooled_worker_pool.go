@@ -28,6 +28,7 @@ import (
 
 type pooledWorkerPool struct {
 	sync.Mutex
+	growOnDemand          bool
 	workChs               []chan Work
 	numShards             int64
 	killWorkerProbability float64
@@ -51,6 +52,7 @@ func NewPooledWorkerPool(size int, opts PooledWorkerPoolOptions) (PooledWorkerPo
 	}
 
 	return &pooledWorkerPool{
+		growOnDemand:          opts.GrowOnDemand(),
 		workChs:               workChs,
 		numShards:             numShards,
 		killWorkerProbability: opts.KillWorkerProbability(),
@@ -67,12 +69,15 @@ func (p *pooledWorkerPool) Init() {
 }
 
 func (p *pooledWorkerPool) Go(work Work) {
-	workCh := p.selectWorkCh()
-	workCh <- work
-}
+	// Use time.Now() to avoid excessive synchronization
+	workChIdx := p.nowFn().UnixNano() % p.numShards
+	workCh := p.workChs[workChIdx]
 
-func (p *pooledWorkerPool) GoOrGrow(work Work) {
-	workCh := p.selectWorkCh()
+	if !p.growOnDemand {
+		workCh <- work
+		return
+	}
+
 	select {
 	case workCh <- work:
 	default:
@@ -89,12 +94,6 @@ func (p *pooledWorkerPool) GoOrGrow(work Work) {
 		// before killing themselves.
 		p.spawnWorker(work, workCh, false)
 	}
-}
-
-func (p *pooledWorkerPool) selectWorkCh() chan Work {
-	// Use time.Now() to avoid excessive synchronization
-	workChIdx := p.nowFn().UnixNano() % p.numShards
-	return p.workChs[workChIdx]
 }
 
 func (p *pooledWorkerPool) spawnWorker(

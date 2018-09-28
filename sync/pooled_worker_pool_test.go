@@ -48,11 +48,13 @@ func TestPooledWorkerPoolGo(t *testing.T) {
 	require.Equal(t, uint32(testWorkerPoolSize*2), count)
 }
 
-func TestPooledWorkerPoolGoOrGrow(t *testing.T) {
+func TestPooledWorkerPoolGrowOnDemand(t *testing.T) {
 	var count uint32
 
 	p, err := NewPooledWorkerPool(
-		1, NewPooledWorkerPoolOptions())
+		1,
+		NewPooledWorkerPoolOptions().
+			SetGrowOnDemand(true))
 	require.NoError(t, err)
 	p.Init()
 
@@ -68,7 +70,7 @@ func TestPooledWorkerPoolGoOrGrow(t *testing.T) {
 		// this test would never complete this loop as the
 		// anonymous Work function below would not complete
 		// and would block further iterations.
-		p.GoOrGrow(func() {
+		p.Go(func() {
 			atomic.AddUint32(&count, 1)
 			wg.Done()
 			<-doneCh
@@ -86,6 +88,7 @@ func TestPooledWorkerPoolGoOrGrowKillWorker(t *testing.T) {
 	p, err := NewPooledWorkerPool(
 		1,
 		NewPooledWorkerPoolOptions().
+			SetGrowOnDemand(true).
 			SetKillWorkerProbability(1.0))
 	require.NoError(t, err)
 	p.Init()
@@ -102,7 +105,7 @@ func TestPooledWorkerPoolGoOrGrowKillWorker(t *testing.T) {
 		// this test would never complete this loop as the
 		// anonymous Work function below would not complete
 		// and would block further iterations.
-		p.GoOrGrow(func() {
+		p.Go(func() {
 			atomic.AddUint32(&count, 1)
 			wg.Done()
 			<-doneCh

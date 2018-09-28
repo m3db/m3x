@@ -25,6 +25,7 @@ import "time"
 const (
 	defaultNumShards             = int64(2 ^ 4)
 	defaultKillWorkerProbability = 0.0001
+	defaultGrowOnDemand          = false
 )
 
 var (
@@ -39,13 +40,15 @@ func NewPooledWorkerPoolOptions() PooledWorkerPoolOptions {
 	return &pooledWorkerPoolOptions{
 		numShards:             defaultNumShards,
 		killWorkerProbability: defaultKillWorkerProbability,
-		nowFn: defaultNowFn,
+		growOnDemand:          defaultGrowOnDemand,
+		nowFn:                 defaultNowFn,
 	}
 }
 
 type pooledWorkerPoolOptions struct {
 	numShards             int64
 	killWorkerProbability float64
+	growOnDemand          bool
 	nowFn                 NowFn
 }
 
@@ -77,4 +80,14 @@ func (o *pooledWorkerPoolOptions) SetNowFn(value NowFn) PooledWorkerPoolOptions 
 
 func (o *pooledWorkerPoolOptions) NowFn() NowFn {
 	return o.nowFn
+}
+
+func (o *pooledWorkerPoolOptions) SetGrowOnDemand(value bool) PooledWorkerPoolOptions {
+	opts := *o
+	opts.growOnDemand = value
+	return &opts
+}
+
+func (o *pooledWorkerPoolOptions) GrowOnDemand() bool {
+	return o.growOnDemand
 }

@@ -48,14 +48,79 @@ func TestPooledWorkerPoolGo(t *testing.T) {
 	require.Equal(t, uint32(testWorkerPoolSize*2), count)
 }
 
+func TestPooledWorkerPoolGoOrGrow(t *testing.T) {
+	var count uint32
+
+	p, err := NewPooledWorkerPool(
+		1, NewPooledWorkerPoolOptions())
+	require.NoError(t, err)
+	p.Init()
+
+	var (
+		wg       sync.WaitGroup
+		numIters = testWorkerPoolSize * 2
+		doneCh   = make(chan struct{})
+	)
+	wg.Add(numIters)
+
+	for i := 0; i < numIters; i++ {
+		// IfGoOrGrow did not allocate new goroutines then
+		// this test would never complete this loop as the
+		// anonymous Work function below would not complete
+		// and would block further iterations.
+		p.GoOrGrow(func() {
+			atomic.AddUint32(&count, 1)
+			wg.Done()
+			<-doneCh
+		})
+	}
+	close(doneCh)
+	wg.Wait()
+
+	require.Equal(t, uint32(numIters), count)
+}
+
+func TestPooledWorkerPoolGoOrGrowKillWorker(t *testing.T) {
+	var count uint32
+
+	p, err := NewPooledWorkerPool(
+		1,
+		NewPooledWorkerPoolOptions().
+			SetKillWorkerProbability(1.0))
+	require.NoError(t, err)
+	p.Init()
+
+	var (
+		wg       sync.WaitGroup
+		numIters = testWorkerPoolSize * 2
+		doneCh   = make(chan struct{})
+	)
+	wg.Add(numIters)
+
+	for i := 0; i < numIters; i++ {
+		// IfGoOrGrow did not allocate new goroutines then
+		// this test would never complete this loop as the
+		// anonymous Work function below would not complete
+		// and would block further iterations.
+		p.GoOrGrow(func() {
+			atomic.AddUint32(&count, 1)
+			wg.Done()
+			<-doneCh
+		})
+	}
+	close(doneCh)
+	wg.Wait()
+
+	require.Equal(t, uint32(numIters), count)
+}
+
 func TestPooledWorkerPoolGoKillWorker(t *testing.T) {
 	var count uint32
 
 	p, err := NewPooledWorkerPool(
 		testWorkerPoolSize,
 		NewPooledWorkerPoolOptions().
-			SetKillWorkerProbability(1.0),
-	)
+			SetKillWorkerProbability(1.0))
 	require.NoError(t, err)
 	p.Init()
 

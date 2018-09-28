@@ -45,6 +45,16 @@ type PooledWorkerPool interface {
 
 	// Go waits until the next worker becomes available and executes it.
 	Go(work Work)
+
+	// GoOrGrow tries to assign the work to an existing goroutine, but if
+	// none are available it will expand the pool of goroutines to accomodate
+	// the work. The newly allocated goroutine will temporarily participate
+	// in the pool in an effort to amortize its allocation cost, but will
+	// eventually be killed. This allows the pool to dynamically respond to
+	// workloads without causing excessive memory pressure. The pool will grow in
+	// size when the workload exceeds its capacity and shrink back down to its
+	// original size if/when the burst subsides.
+	GoOrGrow(work Work)
 }
 
 // WorkerPool provides a pool for goroutines.

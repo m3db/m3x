@@ -61,7 +61,7 @@ func NewPooledWorkerPool(size int, opts PooledWorkerPoolOptions) (PooledWorkerPo
 func (p *pooledWorkerPool) Init() {
 	for _, workCh := range p.workChs {
 		for i := 0; i < cap(workCh); i++ {
-			p.spawnWorker(workCh)
+			p.spawnWorker(nil, workCh, true)
 		}
 	}
 }
@@ -73,14 +73,41 @@ func (p *pooledWorkerPool) Go(work Work) {
 	workCh <- work
 }
 
-func (p *pooledWorkerPool) spawnWorker(workCh chan Work) {
+func (p *pooledWorkerPool) GoOrGrow(work Work) {
+	// Use time.Now() to avoid excessive synchronization
+	workChIdx := p.nowFn().UnixNano() % p.numShards
+	workCh := p.workChs[workChIdx]
+	select {
+	case workCh <- work:
+	default:
+		// If the queue for the worker we were assigned to is full,
+		// allocate a new goroutine to do the work and then
+		// assign it to be a temporary additional worker for the queue.
+		// This allows the worker pool to accomodate "bursts" of
+		// traffic. Also, it reduces the need for operators to tune the size
+		// of the pool for a given workload. If the pool is initially
+		// sized too small, it will eventually grow to accomodate the
+		// workload, and if the workload decreases the killWorkerProbability
+		// will slowly shrink the pool back down to its original size.
+		p.spawnWorker(work, workCh, false)
+	}
+}
+
+func (p *pooledWorkerPool) spawnWorker(
+	initialWork Work, workCh chan Work, spawnReplacement bool) {
 	go func() {
+		if initialWork != nil {
+			initialWork()
+		}
+
 		// RNG per worker to avoid synchronization.
 		rng := rand.New(rand.NewSource(p.nowFn().UnixNano()))
 		for f := range workCh {
 			f()
 			if rng.Float64() < p.killWorkerProbability {
-				p.spawnWorker(workCh)
+				if spawnReplacement {
+					p.spawnWorker(nil, workCh, true)
+				}
 				return
 			}
 		}

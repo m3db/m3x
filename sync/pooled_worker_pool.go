@@ -25,9 +25,12 @@ import (
 	"math/rand"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/uber-go/tally"
+)
+
+const (
+	numGoroutinesGaugeSampleRate = 1000
 )
 
 type pooledWorkerPool struct {
@@ -77,9 +80,16 @@ func (p *pooledWorkerPool) Init() {
 }
 
 func (p *pooledWorkerPool) Go(work Work) {
-	// Use time.Now() to avoid excessive synchronization
-	workChIdx := p.nowFn().UnixNano() % p.numShards
-	workCh := p.workChs[workChIdx]
+	var (
+		// Use time.Now() to avoid excessive synchronization
+		currTime  = p.nowFn().UnixNano()
+		workChIdx = currTime % p.numShards
+		workCh    = p.workChs[workChIdx]
+	)
+
+	if currTime%numGoroutinesGaugeSampleRate == 0 {
+		p.emitNumRoutines()
+	}
 
 	if !p.growOnDemand {
 		workCh <- work
@@ -107,6 +117,7 @@ func (p *pooledWorkerPool) Go(work Work) {
 func (p *pooledWorkerPool) spawnWorker(
 	initialWork Work, workCh chan Work, spawnReplacement bool) {
 	go func() {
+		p.incNumRoutines()
 		if initialWork != nil {
 			initialWork()
 		}
@@ -119,17 +130,16 @@ func (p *pooledWorkerPool) spawnWorker(
 				if spawnReplacement {
 					p.spawnWorker(nil, workCh, true)
 				}
+				p.decNumRoutines()
 				return
 			}
 		}
 	}()
 }
 
-func (p *pooledWorkerPool) reportLoop() {
-	for {
-		time.Sleep(time.Second)
-		p.numRoutinesGauge.Set(p.getNumRoutines())
-	}
+func (p *pooledWorkerPool) emitNumRoutines() {
+	numRoutines := float64(p.getNumRoutines())
+	p.numRoutinesGauge.Update(numRoutines)
 }
 
 func (p *pooledWorkerPool) incNumRoutines() {

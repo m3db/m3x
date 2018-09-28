@@ -88,7 +88,9 @@ func (p *pooledWorkerPool) GoOrGrow(work Work) {
 		// of the pool for a given workload. If the pool is initially
 		// sized too small, it will eventually grow to accomodate the
 		// workload, and if the workload decreases the killWorkerProbability
-		// will slowly shrink the pool back down to its original size.
+		// will slowly shrink the pool back down to its original size because
+		// workers created in this manner will not spawn their replacement
+		// before killing themselves.
 		p.spawnWorker(work, workCh, false)
 	}
 }

@@ -26,23 +26,23 @@ const (
 	defaultWorkerPoolStaticSize = 4096
 )
 
-// WorkerPoolPolicy specifies the policy for the worker pool
+// WorkerPoolPolicy specifies the policy for the worker pool.
 type WorkerPoolPolicy struct {
-	// Determines if the worker pool automatically grows to capacity
+	// Determines if the worker pool automatically grows to capacity.
 	GrowOnDemand bool `yaml:"grow"`
 
-	// Size for static pools, initial size for dynamically growing pools
+	// Size for static pools, initial size for dynamically growing pools.
 	Size int `yaml:"size"`
 
-	// The number of shards for the pool
+	// The number of shards for the pool.
 	NumShards int64 `yaml:"shards"`
 
-	// The probablility that a worker is killed after completing the task
+	// The probablility that a worker is killed after completing the task.
 	KillWorkerProbability float64 `yaml:"killProbability" validate:"min=0.0,max=1.0"`
 }
 
 // Options converts the worker pool policy to options, providing
-// the options, as well as the default size for the worker pool
+// the options, as well as the default size for the worker pool.
 func (w WorkerPoolPolicy) Options() (sync.PooledWorkerPoolOptions, int) {
 	opts := sync.NewPooledWorkerPoolOptions()
 	grow := w.GrowOnDemand

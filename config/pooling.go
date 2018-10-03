@@ -23,8 +23,7 @@ package config
 import "github.com/m3db/m3x/sync"
 
 const (
-	defaultWorkerPoolDynamicSize = 16
-	defaultWorkerPoolStaticSize  = 4096
+	defaultWorkerPoolStaticSize = 4096
 )
 
 // WorkerPoolPolicy specifies the policy for the worker pool
@@ -42,9 +41,9 @@ type WorkerPoolPolicy struct {
 	KillWorkerProbability float64 `yaml:"killProbability" validate:"min=0.0,max=1.0"`
 }
 
-// ToOptions converts the worker pool policy to options, providing
+// Options converts the worker pool policy to options, providing
 // the options, as well as the default size for the worker pool
-func (w WorkerPoolPolicy) ToOptions() (sync.PooledWorkerPoolOptions, int) {
+func (w WorkerPoolPolicy) Options() (sync.PooledWorkerPoolOptions, int) {
 	opts := sync.NewPooledWorkerPoolOptions()
 	grow := w.GrowOnDemand
 	opts = opts.SetGrowOnDemand(grow)
@@ -58,7 +57,7 @@ func (w WorkerPoolPolicy) ToOptions() (sync.PooledWorkerPoolOptions, int) {
 
 	if w.Size == 0 {
 		if grow {
-			w.Size = defaultWorkerPoolDynamicSize
+			w.Size = int(opts.NumShards())
 		} else {
 			w.Size = defaultWorkerPoolStaticSize
 		}

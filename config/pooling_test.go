@@ -25,31 +25,32 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWorkerPoolPolicyConvertsToOptions(t *testing.T) {
-	// Default policy
+func TestWorkerPoolPolicyConvertsToOptionsDefault(t *testing.T) {
 	wpp := WorkerPoolPolicy{}
-	opts, size := wpp.ToOptions()
+	opts, size := wpp.Options()
 	assert.False(t, opts.GrowOnDemand())
 	assert.NotZero(t, opts.NumShards())
 	assert.NotZero(t, opts.KillWorkerProbability())
 	assert.Equal(t, defaultWorkerPoolStaticSize, size)
+}
 
-	// Default policy with a growing pool
-	wpp = WorkerPoolPolicy{GrowOnDemand: true}
-	opts, size = wpp.ToOptions()
+func TestWorkerPoolPolicyConvertsToOptionsDefaultGrow(t *testing.T) {
+	wpp := WorkerPoolPolicy{GrowOnDemand: true}
+	opts, size := wpp.Options()
 	assert.True(t, opts.GrowOnDemand())
 	assert.NotZero(t, opts.NumShards())
 	assert.NotZero(t, opts.KillWorkerProbability())
-	assert.Equal(t, defaultWorkerPoolDynamicSize, size)
+	assert.Equal(t, opts.NumShards(), int64(size))
+}
 
-	// Full policy
-	wpp = WorkerPoolPolicy{
+func TestWorkerPoolPolicyConvertsToOptions(t *testing.T) {
+	wpp := WorkerPoolPolicy{
 		GrowOnDemand:          true,
 		Size:                  100,
 		NumShards:             200,
 		KillWorkerProbability: 0.5,
 	}
-	opts, size = wpp.ToOptions()
+	opts, size := wpp.Options()
 	assert.True(t, opts.GrowOnDemand())
 	assert.Equal(t, int64(200), opts.NumShards())
 	assert.Equal(t, 0.5, opts.KillWorkerProbability())

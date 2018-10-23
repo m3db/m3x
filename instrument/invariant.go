@@ -21,6 +21,7 @@
 package instrument
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -77,9 +78,26 @@ func EmitAndLogInvariantViolation(opts Options, f func(l log.Logger)) {
 	panicIfEnvSet()
 }
 
+// InvariantErrorf constructs a new error, prefixed with a string indicating that an invariant
+// violated occurred. Optionally panics if the ShouldPanicEnvironmentVariableName is set to "true".
+func InvariantErrorf(format string, a ...interface{}) error {
+	err := fmt.Errorf(format, a...)
+	panicIfEnvSetWithMessage(err.Error())
+	return err
+}
+
 func panicIfEnvSet() {
+	panicIfEnvSetWithMessage("")
+}
+
+func panicIfEnvSetWithMessage(s string) {
 	envIsSet := strings.ToLower(os.Getenv(ShouldPanicEnvironmentVariableName)) == "true"
+
 	if envIsSet {
-		panic("invariant violation detected")
+		if s == "" {
+			s = "invariant violation detected"
+		}
+
+		panic(s)
 	}
 }

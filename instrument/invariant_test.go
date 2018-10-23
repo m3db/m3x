@@ -22,8 +22,11 @@ package instrument_test
 
 import (
 	"fmt"
+	"os"
+	"testing"
 
 	"github.com/m3db/m3x/instrument"
+	"github.com/m3db/m3x/log"
 
 	"github.com/uber-go/tally"
 )
@@ -37,4 +40,48 @@ func ExampleInvariantViolatedMetricInvocation() {
 	counter := counters[instrument.InvariantViolatedMetricName+"+"]
 	fmt.Println(counter.Name(), counter.Value())
 	// Output: invariant_violated 1
+}
+
+func TestEmitInvariantViolationDoesNotPanicIfEnvNotSet(t *testing.T) {
+	opts := instrument.NewOptions()
+	instrument.EmitInvariantViolation(opts)
+}
+
+func TestEmitAndLogInvariantViolationDoesNotPanicIfEnvNotSet(t *testing.T) {
+	opts := instrument.NewOptions()
+	instrument.EmitAndLogInvariantViolation(opts, func(l log.Logger) {
+		l.Error("some_error")
+	})
+}
+
+func TestEmitInvariantViolationPanicsIfEnvSet(t *testing.T) {
+	os.Setenv(instrument.ShouldPanicEnvironmentVariableName, "true")
+	defer func() {
+		if r := recover(); r == nil {
+			panic("test should have panic'd but did not")
+		}
+	}()
+	defer func() {
+		os.Setenv(instrument.ShouldPanicEnvironmentVariableName, "")
+	}()
+
+	opts := instrument.NewOptions()
+	instrument.EmitInvariantViolation(opts)
+}
+
+func TestEmitAndLogInvariantViolationPanicsIfEnvSet(t *testing.T) {
+	os.Setenv(instrument.ShouldPanicEnvironmentVariableName, "true")
+	defer func() {
+		if r := recover(); r == nil {
+			panic("test should have panic'd but did not")
+		}
+	}()
+	defer func() {
+		os.Setenv(instrument.ShouldPanicEnvironmentVariableName, "")
+	}()
+
+	opts := instrument.NewOptions()
+	instrument.EmitAndLogInvariantViolation(opts, func(l log.Logger) {
+		l.Error("some_error")
+	})
 }

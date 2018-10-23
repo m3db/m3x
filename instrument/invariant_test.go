@@ -63,7 +63,7 @@ func TestErrorfDoesNotPanicIfEnvNotSet(t *testing.T) {
 	var (
 		format      = "some error format: %s"
 		err_msg     = "error message"
-		expectedErr = fmt.Errorf(format, err_msg)
+		expectedErr = fmt.Errorf("invariant_violated: some error format: error message")
 	)
 	require.NotPanics(t, func() {
 		require.Equal(

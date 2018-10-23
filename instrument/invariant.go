@@ -82,10 +82,11 @@ func EmitAndLogInvariantViolation(opts Options, f func(l log.Logger)) {
 // violation occurred. Optionally panics if the ShouldPanicEnvironmentVariableName is set to "true".
 func InvariantErrorf(format string, a ...interface{}) error {
 	var (
-		invariantFormat = fmt.Sprintf("%s: %s", InvariantViolatedMetricName, format)
+		invariantFormat = InvariantViolatedMetricName + ": " + format
 		err             = fmt.Errorf(invariantFormat, a...)
 	)
 
+	fmt.Println(invariantFormat)
 	panicIfEnvSetWithMessage(err.Error())
 	return err
 }

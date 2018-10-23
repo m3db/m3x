@@ -27,6 +27,7 @@ import (
 
 	"github.com/m3db/m3x/instrument"
 	"github.com/m3db/m3x/log"
+	"github.com/stretchr/testify/require"
 
 	"github.com/uber-go/tally"
 )
@@ -44,44 +45,46 @@ func ExampleInvariantViolatedMetricInvocation() {
 
 func TestEmitInvariantViolationDoesNotPanicIfEnvNotSet(t *testing.T) {
 	opts := instrument.NewOptions()
-	instrument.EmitInvariantViolation(opts)
+	require.NotPanics(t, func() {
+		instrument.EmitInvariantViolation(opts)
+	})
 }
 
 func TestEmitAndLogInvariantViolationDoesNotPanicIfEnvNotSet(t *testing.T) {
 	opts := instrument.NewOptions()
-	instrument.EmitAndLogInvariantViolation(opts, func(l log.Logger) {
-		l.Error("some_error")
+	require.NotPanics(t, func() {
+		instrument.EmitAndLogInvariantViolation(opts, func(l log.Logger) {
+			l.Error("some_error")
+		})
 	})
 }
 
 func TestEmitInvariantViolationPanicsIfEnvSet(t *testing.T) {
-	os.Setenv(instrument.ShouldPanicEnvironmentVariableName, "true")
-	defer func() {
-		if r := recover(); r == nil {
-			panic("test should have panic'd but did not")
-		}
-	}()
-	defer func() {
-		os.Setenv(instrument.ShouldPanicEnvironmentVariableName, "")
-	}()
+	defer setShouldPanicEnvironmentVariable()()
 
 	opts := instrument.NewOptions()
-	instrument.EmitInvariantViolation(opts)
+	require.Panics(t, func() {
+		instrument.EmitInvariantViolation(opts)
+	})
 }
 
 func TestEmitAndLogInvariantViolationPanicsIfEnvSet(t *testing.T) {
-	os.Setenv(instrument.ShouldPanicEnvironmentVariableName, "true")
-	defer func() {
-		if r := recover(); r == nil {
-			panic("test should have panic'd but did not")
-		}
-	}()
-	defer func() {
-		os.Setenv(instrument.ShouldPanicEnvironmentVariableName, "")
-	}()
+	defer setShouldPanicEnvironmentVariable()()
 
 	opts := instrument.NewOptions()
-	instrument.EmitAndLogInvariantViolation(opts, func(l log.Logger) {
-		l.Error("some_error")
+	require.Panics(t, func() {
+		instrument.EmitAndLogInvariantViolation(opts, func(l log.Logger) {
+			l.Error("some_error")
+		})
+	})
+}
+
+type cleanupFn func()
+
+func setShouldPanicEnvironmentVariable() cleanupFn {
+	restoreValue := os.Getenv(instrument.ShouldPanicEnvironmentVariableName)
+	os.Setenv(instrument.ShouldPanicEnvironmentVariableName, "true")
+	return cleanupFn(func() {
+		os.Setenv(instrument.ShouldPanicEnvironmentVariableName, restoreValue)
 	})
 }

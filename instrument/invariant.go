@@ -86,7 +86,6 @@ func InvariantErrorf(format string, a ...interface{}) error {
 		err             = fmt.Errorf(invariantFormat, a...)
 	)
 
-	fmt.Println(invariantFormat)
 	panicIfEnvSetWithMessage(err.Error())
 	return err
 }

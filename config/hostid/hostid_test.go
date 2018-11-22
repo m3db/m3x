@@ -21,8 +21,10 @@
 package hostid
 
 import (
+	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -105,6 +107,20 @@ func TestEnvironmentResolverErrorWhenValueMissing(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestKeyValueFileResolver(t *testing.T) {
+	cfg := Configuration{
+		Resolver: "kvFile",
+		KVFile: &KVFileConfig{
+			Path: "foobarbaz",
+			Key:  "foo",
+		},
+	}
+
+	_, err := cfg.Resolve()
+	assert.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), "no such file"), "expected error to be due to file not found")
+}
+
 func TestUnknownResolverError(t *testing.T) {
 	cfg := Configuration{
 		Resolver: "some-unknown-type",
@@ -112,4 +128,131 @@ func TestUnknownResolverError(t *testing.T) {
 
 	_, err := cfg.Resolve()
 	require.Error(t, err)
+}
+
+func TestKVFileConfig(t *testing.T) {
+	c := &kvFile{
+		path: "foobarpath",
+	}
+
+	_, err := c.ID()
+	assert.Error(t, err)
+
+	f, err := ioutil.TempFile("", "hostid-test")
+	require.NoError(t, err)
+
+	defer os.Remove(f.Name())
+
+	_, err = f.WriteString("k1=v1")
+	require.NoError(t, err)
+
+	c = &kvFile{
+		path: f.Name(),
+		key:  "k1",
+	}
+
+	v, err := c.ID()
+	assert.NoError(t, err)
+	assert.Equal(t, "v1", v)
+}
+
+func TestKVFileConfig_Timeout(t *testing.T) {
+	f, err := ioutil.TempFile("", "hostid-test")
+	require.NoError(t, err)
+
+	defer os.Remove(f.Name())
+
+	c := &kvFile{
+		path:     f.Name(),
+		key:      "k1",
+		interval: 10 * time.Millisecond,
+		timeout:  time.Minute,
+	}
+
+	valC := make(chan string)
+
+	go func() {
+		v, err := c.ID()
+		if err == nil {
+			valC <- v
+			close(valC)
+		}
+	}()
+
+	time.Sleep(time.Second)
+	_, err = f.WriteString("k1=v1")
+	require.NoError(t, err)
+
+	select {
+	case v := <-valC:
+		assert.Equal(t, "v1", v)
+	case <-time.After(5 * time.Second):
+		t.Fatal("expected to see value within 5s")
+	}
+}
+
+func TestKVFileConfig_TimeoutErr(t *testing.T) {
+	f, err := ioutil.TempFile("", "hostid-test")
+	require.NoError(t, err)
+
+	defer os.Remove(f.Name())
+
+	c := &kvFile{
+		path:     f.Name(),
+		key:      "k1",
+		interval: 10 * time.Millisecond,
+		timeout:  time.Second,
+	}
+
+	_, err = c.ID()
+	assert.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), "within 1s"))
+}
+
+func TestParseKV(t *testing.T) {
+	for _, test := range []struct {
+		content string
+		key     string
+		exp     string
+		expErr  bool
+	}{
+		{
+			content: `k1=v1
+k2=v2`,
+			key: "k2",
+			exp: "v2",
+		},
+		{
+			content: `k1=v1
+k2=v2=foo=bar`,
+			key: "k2",
+			exp: "v2=foo=bar",
+		},
+		{
+			content: `k1=v1
+   k2=v2=foo=bar  `,
+			key: "k2",
+			exp: "v2=foo=bar",
+		},
+		{
+			content: `k1=v1
+k2=v2`,
+			key:    "k3",
+			expErr: true,
+		},
+	} {
+		c := &kvFile{
+			key: test.key,
+		}
+		r := strings.NewReader(test.content)
+
+		val, err := c.parseKV(r)
+		if test.expErr {
+			assert.Error(t, err)
+			continue
+		}
+
+		assert.NoError(t, err)
+		assert.Equal(t, test.exp, val)
+	}
 }

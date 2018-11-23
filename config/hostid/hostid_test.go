@@ -107,12 +107,11 @@ func TestEnvironmentResolverErrorWhenValueMissing(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestKeyValueFileResolver(t *testing.T) {
+func TestFileResolver(t *testing.T) {
 	cfg := Configuration{
-		Resolver: "kvFile",
-		KVFile: &KVFileConfig{
+		Resolver: "file",
+		File: &FileConfig{
 			Path: "foobarbaz",
-			Key:  "foo",
 		},
 	}
 
@@ -130,8 +129,8 @@ func TestUnknownResolverError(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestKVFileConfig(t *testing.T) {
-	c := &kvFile{
+func TestFileConfig(t *testing.T) {
+	c := &file{
 		path: "foobarpath",
 	}
 
@@ -143,28 +142,26 @@ func TestKVFileConfig(t *testing.T) {
 
 	defer os.Remove(f.Name())
 
-	_, err = f.WriteString("k1=v1")
+	_, err = f.WriteString("testidentity")
 	require.NoError(t, err)
 
-	c = &kvFile{
+	c = &file{
 		path: f.Name(),
-		key:  "k1",
 	}
 
 	v, err := c.ID()
 	assert.NoError(t, err)
-	assert.Equal(t, "v1", v)
+	assert.Equal(t, "testidentity", v)
 }
 
-func TestKVFileConfig_Timeout(t *testing.T) {
+func TestFileConfig_Timeout(t *testing.T) {
 	f, err := ioutil.TempFile("", "hostid-test")
 	require.NoError(t, err)
 
 	defer os.Remove(f.Name())
 
-	c := &kvFile{
+	c := &file{
 		path:     f.Name(),
-		key:      "k1",
 		interval: 10 * time.Millisecond,
 		timeout:  time.Minute,
 	}
@@ -180,26 +177,25 @@ func TestKVFileConfig_Timeout(t *testing.T) {
 	}()
 
 	time.Sleep(time.Second)
-	_, err = f.WriteString("k1=v1")
+	_, err = f.WriteString("testidentity")
 	require.NoError(t, err)
 
 	select {
 	case v := <-valC:
-		assert.Equal(t, "v1", v)
+		assert.Equal(t, "testidentity", v)
 	case <-time.After(5 * time.Second):
 		t.Fatal("expected to see value within 5s")
 	}
 }
 
-func TestKVFileConfig_TimeoutErr(t *testing.T) {
+func TestFileConfig_TimeoutErr(t *testing.T) {
 	f, err := ioutil.TempFile("", "hostid-test")
 	require.NoError(t, err)
 
 	defer os.Remove(f.Name())
 
-	c := &kvFile{
+	c := &file{
 		path:     f.Name(),
-		key:      "k1",
 		interval: 10 * time.Millisecond,
 		timeout:  time.Second,
 	}
@@ -207,52 +203,4 @@ func TestKVFileConfig_TimeoutErr(t *testing.T) {
 	_, err = c.ID()
 	assert.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), "within 1s"))
-}
-
-func TestParseKV(t *testing.T) {
-	for _, test := range []struct {
-		content string
-		key     string
-		exp     string
-		expErr  bool
-	}{
-		{
-			content: `k1=v1
-k2=v2`,
-			key: "k2",
-			exp: "v2",
-		},
-		{
-			content: `k1=v1
-k2=v2=foo=bar`,
-			key: "k2",
-			exp: "v2=foo=bar",
-		},
-		{
-			content: `k1=v1
-   k2=v2=foo=bar  `,
-			key: "k2",
-			exp: "v2=foo=bar",
-		},
-		{
-			content: `k1=v1
-k2=v2`,
-			key:    "k3",
-			expErr: true,
-		},
-	} {
-		c := &kvFile{
-			key: test.key,
-		}
-		r := strings.NewReader(test.content)
-
-		val, err := c.parseKV(r)
-		if test.expErr {
-			assert.Error(t, err)
-			continue
-		}
-
-		assert.NoError(t, err)
-		assert.Equal(t, test.exp, val)
-	}
 }

@@ -23,12 +23,10 @@
 package hostid
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -47,9 +45,8 @@ const (
 	// EnvironmentResolver resolves host using an environment variable
 	// of which the name is provided in config
 	EnvironmentResolver Resolver = "environment"
-	// KeyValueFileResolver parses a file of key-value pairs (formatted
-	// `KEY=VALUE`) and resolves host ID from a given key.
-	KeyValueFileResolver Resolver = "kvFile"
+	// FileResolver reads its identity from a non-empty file.
+	FileResolver Resolver = "file"
 )
 
 // IDResolver represents a method of resolving host identity.
@@ -68,19 +65,16 @@ type Configuration struct {
 	// EnvVarName is the environment specified host ID if using environment host ID resolver.
 	EnvVarName *string `yaml:"envVarName"`
 
-	// KVFile is the kv file config.
-	KVFile *KVFileConfig `yaml:"kvFile"`
+	// File is the kv file config.
+	File *FileConfig `yaml:"file"`
 }
 
-// KVFileConfig contains the info needed to construct a KeyValueFileResolver.
-type KVFileConfig struct {
+// FileConfig contains the info needed to construct a FileResolver.
+type FileConfig struct {
 	// Path of the file containing the KV config.
 	Path string `yaml:"path"`
 
-	// Key to search for in the file.
-	Key string `yaml:"key"`
-
-	// Timeout to wait to find the key in the file.
+	// Timeout to wait for the file to be non-empty.
 	Timeout time.Duration `yaml:"timeout"`
 }
 
@@ -92,14 +86,13 @@ func (c Configuration) resolver() (IDResolver, error) {
 		return &configResolver{value: c.Value}, nil
 	case EnvironmentResolver:
 		return &environmentResolver{envVarName: c.EnvVarName}, nil
-	case KeyValueFileResolver:
-		if c.KVFile == nil {
+	case FileResolver:
+		if c.File == nil {
 			return nil, errors.New("KV file config cannot be nil")
 		}
-		return &kvFile{
-			key:     c.KVFile.Key,
-			path:    c.KVFile.Path,
-			timeout: c.KVFile.Timeout,
+		return &file{
+			path:    c.File.Path,
+			timeout: c.File.Timeout,
 		}, nil
 	}
 	return nil, fmt.Errorf("unknown host ID resolver: resolver=%s",
@@ -152,25 +145,33 @@ func (c *environmentResolver) ID() (string, error) {
 	return v, nil
 }
 
-type kvFile struct {
+type file struct {
 	path     string
-	key      string
 	interval time.Duration
 	timeout  time.Duration
 }
 
-// ID attempts to parse an ID from a KV config file. It will optionally wait a
-// timeout to find the value, as in some environments the file may be
-// dynamically generated from external metadata and not immediately available
-// when the instance starts up.
-func (c *kvFile) ID() (string, error) {
+// ID attempts to parse an ID from a  file. It will optionally wait a timeout to
+// find the value, as in some environments the file may be dynamically generated
+// from external metadata and not immediately available when the instance starts
+// up.
+func (c *file) ID() (string, error) {
 	checkF := func() (string, error) {
 		f, err := os.Open(c.path)
 		if err != nil {
 			return "", err
 		}
 
-		return c.parseKV(f)
+		data, err := ioutil.ReadAll(f)
+		if err != nil {
+			return "", err
+		}
+
+		if len(data) == 0 {
+			return "", errors.New("host ID cannot be empty")
+		}
+
+		return string(data), nil
 	}
 
 	if c.timeout == 0 {
@@ -193,25 +194,4 @@ func (c *kvFile) ID() (string, error) {
 	}
 
 	return "", fmt.Errorf("did not find value in %s within %s", c.path, c.timeout)
-}
-
-func (c *kvFile) parseKV(r io.Reader) (string, error) {
-	s := bufio.NewScanner(r)
-	for s.Scan() {
-		l := strings.Trim(s.Text(), " ")
-		parts := strings.SplitN(l, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-
-		if parts[0] == c.key {
-			return parts[1], nil
-		}
-	}
-
-	if err := s.Err(); err != nil {
-		return "", err
-	}
-
-	return "", fmt.Errorf("did not find key '%s' in %s", c.key, c.path)
 }

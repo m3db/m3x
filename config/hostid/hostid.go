@@ -27,11 +27,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 )
 
 const (
-	defaultFileCheckInterval = 10 * time.Second
+	defaultFileCheckInterval = time.Second
+)
+
+var (
+	errHostIDFileEmpty = errors.New("host ID file is empty")
 )
 
 // Resolver is a type of host ID resolver
@@ -65,17 +70,17 @@ type Configuration struct {
 	// EnvVarName is the environment specified host ID if using environment host ID resolver.
 	EnvVarName *string `yaml:"envVarName"`
 
-	// File is the kv file config.
+	// File is the file config.
 	File *FileConfig `yaml:"file"`
 }
 
 // FileConfig contains the info needed to construct a FileResolver.
 type FileConfig struct {
-	// Path of the file containing the KV config.
+	// Path of the file containing the host ID.
 	Path string `yaml:"path"`
 
 	// Timeout to wait for the file to be non-empty.
-	Timeout time.Duration `yaml:"timeout"`
+	Timeout *time.Duration `yaml:"timeout"`
 }
 
 func (c Configuration) resolver() (IDResolver, error) {
@@ -88,7 +93,7 @@ func (c Configuration) resolver() (IDResolver, error) {
 		return &environmentResolver{envVarName: c.EnvVarName}, nil
 	case FileResolver:
 		if c.File == nil {
-			return nil, errors.New("KV file config cannot be nil")
+			return nil, errors.New("file config cannot be nil")
 		}
 		return &file{
 			path:    c.File.Path,
@@ -148,7 +153,7 @@ func (c *environmentResolver) ID() (string, error) {
 type file struct {
 	path     string
 	interval time.Duration
-	timeout  time.Duration
+	timeout  *time.Duration
 }
 
 // ID attempts to parse an ID from a  file. It will optionally wait a timeout to
@@ -167,14 +172,15 @@ func (c *file) ID() (string, error) {
 			return "", err
 		}
 
-		if len(data) == 0 {
-			return "", errors.New("host ID cannot be empty")
+		val := strings.TrimSpace(string(data))
+		if len(val) == 0 {
+			return "", errHostIDFileEmpty
 		}
 
-		return string(data), nil
+		return val, nil
 	}
 
-	if c.timeout == 0 {
+	if c.timeout == nil {
 		return checkF()
 	}
 
@@ -184,7 +190,7 @@ func (c *file) ID() (string, error) {
 	}
 
 	startT := time.Now()
-	for time.Since(startT) < c.timeout {
+	for time.Since(startT) < *c.timeout {
 		v, err := checkF()
 		if err == nil {
 			return v, nil

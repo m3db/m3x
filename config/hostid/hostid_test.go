@@ -160,10 +160,11 @@ func TestFileConfig_Timeout(t *testing.T) {
 
 	defer os.Remove(f.Name())
 
+	timeout := time.Minute
 	c := &file{
 		path:     f.Name(),
 		interval: 10 * time.Millisecond,
-		timeout:  time.Minute,
+		timeout:  &timeout,
 	}
 
 	valC := make(chan string)
@@ -194,10 +195,11 @@ func TestFileConfig_TimeoutErr(t *testing.T) {
 
 	defer os.Remove(f.Name())
 
+	timeout := time.Second
 	c := &file{
 		path:     f.Name(),
 		interval: 10 * time.Millisecond,
-		timeout:  time.Second,
+		timeout:  &timeout,
 	}
 
 	_, err = c.ID()

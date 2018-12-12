@@ -31,7 +31,7 @@ type Sampler struct {
 
 // NewSampler creates a new sampler with a sample rate.
 func NewSampler(sampleRate float64) *Sampler {
-	return &Sampler{numTried: atomic.NewInt32(0), sampleEvery: int32(float64(1.0 / sampleRate))}
+	return &Sampler{numTried: atomic.NewInt32(0), sampleEvery: int32(1.0 / sampleRate)}
 }
 
 // Sample returns true when the call is sampled.

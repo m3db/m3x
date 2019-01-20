@@ -43,7 +43,7 @@ func WithBytes(s string, fn BytesFn) {
 	// NB(xichen): regardless of whether the backing array is allocated on the heap
 	// or on the stack, it should still be valid before the string goes out of scope
 	// so it's safe to call the function on the underlying byte slice.
-	fn(toBytes(s))
+	fn(Bytes(s))
 }
 
 // WithBytesAndArg converts a string to a byte slice with zero heap memory allocations,
@@ -52,10 +52,14 @@ func WithBytes(s string, fn BytesFn) {
 // the byte slice in any way, and holds no reference to the byte slice after the function
 // returns.
 func WithBytesAndArg(s string, arg interface{}, fn BytesAndArgFn) {
-	fn(toBytes(s), arg)
+	fn(Bytes(s), arg)
 }
 
-func toBytes(s string) ImmutableBytes {
+// Bytes returns the bytes backing a string, it is the caller's responsibility
+// not to mutate the bytes returned. It is much safer to use WithBytes and
+// WithBytesAndArg if possible, which is more likely to force use of the result
+// to just a small block of code.
+func Bytes(s string) ImmutableBytes {
 	if len(s) == 0 {
 		return nil
 	}

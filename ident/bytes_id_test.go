@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Uber Technologies, Inc.
+// Copyright (c) 2018 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,31 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package unsafe
+package ident
 
 import (
-	"bytes"
 	"testing"
+
+	"github.com/m3db/m3x/checked"
 )
 
-func BenchmarkToBytesSmallString(b *testing.B) {
-	str := "foobarbaz"
+func BenchmarkBytesID(b *testing.B) {
+	var a interface{}
+	foo := []byte("foo")
+	bar := []byte("bar")
+	realID := BinaryID(checked.NewBytes(bar, nil))
+
+	a = BytesID([]byte("other"))
 
 	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		_ = Bytes(str)
-	}
-}
+	b.StartTimer()
 
-func BenchmarkToBytesLargeString(b *testing.B) {
-	var buf bytes.Buffer
-	for i := 0; i < 65536; i++ {
-		buf.WriteByte(byte(i % 256))
-	}
-	str := buf.String()
+	total := 0
+	for i := 0; i < b.N; i++ {
+		if i%2 == 0 {
+			a = BytesID(foo)
+		} else {
+			a = realID
+		}
 
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		_ = Bytes(str)
+		if a == nil {
+			total += -1
+		} else {
+			total++
+		}
+
 	}
+
+	b.StopTimer()
 }

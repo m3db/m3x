@@ -26,10 +26,10 @@ import (
 	"unsafe"
 )
 
-// StringFn processes a byte slice
+// StringFn processes a byte slice.
 type StringFn func(string)
 
-// StringAndArgFn takes an argument alongside the byte slice
+// StringAndArgFn takes an argument alongside the byte slice.
 type StringAndArgFn func(string, interface{})
 
 // WithString converts a byte slice to a string with zero heap memory
@@ -61,23 +61,23 @@ func String(b []byte) string {
 		return s
 	}
 
-	// NB(xichen): we need to declare a real string so internally the compiler
-	// knows to use an unsafe.Pointer to keep track of the underlying memory so tha
-	// once the slice's array pointer is updated with the pointer to the string's
-	// underlying bytes, the compiler won't prematurely GC the memory when the string
+	// NB(r): We need to declare a real string so internally the compiler
+	// knows to use an unsafe.Pointer to keep track of the underlying memory so that
+	// once the strings's array pointer is updated with the pointer to the byte slices's
+	// underlying bytes, the compiler won't prematurely GC the memory when the byte slice
 	// goes out of scope.
 	stringHeader := (*reflect.StringHeader)(unsafe.Pointer(&s))
 
-	// NB(xichen): this makes sure that even if GC relocates the string's underlying
+	// NB(r): This makes sure that even if GC relocates the byte slices's underlying
 	// memory after this assignment, the corresponding unsafe.Pointer in the internal
-	// slice struct will be updated accordingly to reflect the memory relocation.
+	// string struct will be updated accordingly to reflect the memory relocation.
 	stringHeader.Data = (*reflect.SliceHeader)(unsafe.Pointer(&b)).Data
 
-	// NB(xichen): it is important that we access s after we assign the Data
-	// pointer of the string header to the Data pointer of the slice header to
+	// NB(r): It is important that we access b after we assign the Data
+	// pointer of the byte slice header to the Data pointer of the string header to
 	// make sure the bytes don't get GC'ed before the assignment happens.
 	l := len(b)
 	stringHeader.Len = l
 
-	return *((*string)(unsafe.Pointer(&s)))
+	return s
 }

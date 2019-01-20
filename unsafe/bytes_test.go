@@ -55,6 +55,15 @@ func TestWithStringAndArgLargeString(t *testing.T) {
 	validateWithStringAndArg(t, str)
 }
 
+var withStringBenchSink string
+
+func BenchmarkWithString(b *testing.B) {
+	str := []byte("foobarbaz")
+	WithString(str, func(s string) {
+		withStringBenchSink = s
+	})
+}
+
 func validateWithString(t *testing.T, b []byte) {
 	WithString(b, func(str string) {
 		require.Equal(t, []byte(str), []byte(b))

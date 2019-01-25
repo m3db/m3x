@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
 	"github.com/uber/jaeger-client-go"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
 	"go.uber.org/zap"
 )
 
@@ -32,7 +33,7 @@ func TestTracingConfiguration_NewTracer(t *testing.T) {
 			Backend: "someone_else",
 		}
 		_, _, err := doCall(&cfg)
-		require.EqualError(t, err, "unknown tracing backend: someone_else")
+		require.EqualError(t, err, "unknown tracing backend: someone_else. Supported backends are: jaeger")
 	})
 
 	t.Run("initializes jaeger tracer", func(t *testing.T) {
@@ -46,7 +47,7 @@ func TestTracingConfiguration_NewTracer(t *testing.T) {
 		assert.IsType(t, (*jaeger.Tracer)(nil), tr)
 	})
 
-	t.Run("sets service name", func(t *testing.T) {
+	t.Run("sets service name on empty", func(t *testing.T) {
 		cfg := TracingConfiguration{
 			Backend: TracingBackendJaeger,
 		}
@@ -55,5 +56,19 @@ func TestTracingConfiguration_NewTracer(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, serviceName, cfg.Jaeger.ServiceName)
+	})
+
+	t.Run("leaves service name on non-empty", func(t *testing.T) {
+		cfg := TracingConfiguration{
+			Backend: TracingBackendJaeger,
+			Jaeger: jaegercfg.Configuration{
+				ServiceName: "other",
+			},
+		}
+		_, closer, err := doCall(&cfg)
+		defer closer.Close()
+
+		require.NoError(t, err)
+		assert.Equal(t, "other", cfg.Jaeger.ServiceName)
 	})
 }

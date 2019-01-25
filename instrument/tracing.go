@@ -24,17 +24,22 @@ type TracingConfiguration struct {
 	Jaeger  jaegercfg.Configuration `yaml:"jaeger"`
 }
 
-
-func (cfg *TracingConfiguration) NewTracer(serviceName string, scope tally.Scope, logger *zap.Logger) (opentracing.Tracer, io.Closer, error) {
+// NewTracer returns a tracer configured with the configuration provided by this struct. The tracer's concrete
+// type is determined by cfg.Backend. Currently only `"jaeger"` is supported. `""` implies
+// disabled (NoopTracer).
+func (cfg *TracingConfiguration) NewTracer(defaultServiceName string, scope tally.Scope, logger *zap.Logger) (opentracing.Tracer, io.Closer, error) {
 	if cfg.Backend == "" {
 		return opentracing.NoopTracer{}, noopCloser{}, nil
 	}
 
 	if cfg.Backend != TracingBackendJaeger {
-		return nil, nil, fmt.Errorf("unknown tracing backend: %s", cfg.Backend)
+		return nil, nil, fmt.Errorf("unknown tracing backend: %s. Supported backends are: %s", cfg.Backend, TracingBackendJaeger)
 	}
 
-	cfg.Jaeger.ServiceName = serviceName
+	if cfg.Jaeger.ServiceName == "" {
+		cfg.Jaeger.ServiceName = defaultServiceName
+	}
+
 	jaegerLog := jaegerzap.NewLogger(logger)
 	tracer, jaegerCloser, err := cfg.Jaeger.NewTracer(
 		jaegercfg.Logger(jaegerLog),
@@ -43,6 +48,7 @@ func (cfg *TracingConfiguration) NewTracer(serviceName string, scope tally.Scope
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to initialize jaeger: %s", err.Error())
 	}
+
 	return tracer, jaegerCloser, nil
 }
 

@@ -33,8 +33,8 @@ const (
 )
 
 var (
-	defaultNumShards int64 // Set by init().
-	defaultNowFn = time.Now
+	defaultNumShards = int64(runtime.NumCPU())
+	defaultNowFn     = time.Now
 )
 
 // NowFn is a function that returns the current time.
@@ -108,8 +108,3 @@ func (o *pooledWorkerPoolOptions) SetInstrumentOptions(value instrument.Options)
 func (o *pooledWorkerPoolOptions) InstrumentOptions() instrument.Options {
 	return o.iOpts
 }
-
-func init() {
-	defaultNumShards = int64(runtime.NumCPU())
-}
-

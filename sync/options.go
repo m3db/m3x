@@ -21,18 +21,19 @@
 package sync
 
 import (
+	"runtime"
 	"time"
 
 	"github.com/m3db/m3x/instrument"
 )
 
 const (
-	defaultNumShards             = int64(2 ^ 4)
-	defaultKillWorkerProbability = 0.0001
+	defaultKillWorkerProbability = 0.001
 	defaultGrowOnDemand          = false
 )
 
 var (
+	defaultNumShards int // Set by init().
 	defaultNowFn = time.Now
 )
 
@@ -107,3 +108,8 @@ func (o *pooledWorkerPoolOptions) SetInstrumentOptions(value instrument.Options)
 func (o *pooledWorkerPoolOptions) InstrumentOptions() instrument.Options {
 	return o.iOpts
 }
+
+func init() {
+	defaultNumShards = runtime.NumCPU()
+}
+

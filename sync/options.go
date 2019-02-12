@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	defaultNumShards int // Set by init().
+	defaultNumShards int64 // Set by init().
 	defaultNowFn = time.Now
 )
 
@@ -110,6 +110,6 @@ func (o *pooledWorkerPoolOptions) InstrumentOptions() instrument.Options {
 }
 
 func init() {
-	defaultNumShards = runtime.NumCPU()
+	defaultNumShards = int64(runtime.NumCPU())
 }
 

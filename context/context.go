@@ -29,6 +29,7 @@ import (
 )
 
 // NB(r): using golang.org/x/net/context is too GC expensive.
+// Instead, we just embed one.
 type ctx struct {
 	sync.RWMutex
 

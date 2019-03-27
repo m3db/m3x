@@ -24,12 +24,15 @@ import (
 	"sync"
 
 	"github.com/m3db/m3x/resource"
+
+	xnetcontext "golang.org/x/net/context"
 )
 
 // NB(r): using golang.org/x/net/context is too GC expensive.
 type ctx struct {
 	sync.RWMutex
 
+	goCtx         xnetcontext.Context
 	pool          contextPool
 	done          bool
 	wg            sync.WaitGroup
@@ -49,6 +52,18 @@ func NewContext() Context {
 // NewPooledContext returns a new context that is returned to a pool when closed.
 func newPooledContext(pool contextPool) Context {
 	return &ctx{pool: pool}
+}
+
+func (c *ctx) GoContext() (xnetcontext.Context, bool) {
+	if c.goCtx == nil {
+		return nil, false
+	}
+
+	return c.goCtx, true
+}
+
+func (c *ctx) SetGoContext(v xnetcontext.Context) {
+	c.goCtx = v
 }
 
 func (c *ctx) IsClosed() bool {
@@ -175,9 +190,7 @@ func (c *ctx) finalize(f []finalizeable) {
 
 func (c *ctx) Reset() {
 	c.Lock()
-
-	c.done, c.finalizeables = false, nil
-
+	c.done, c.finalizeables, c.goCtx = false, nil, nil
 	c.Unlock()
 }
 

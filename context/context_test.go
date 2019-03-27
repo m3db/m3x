@@ -29,6 +29,7 @@ import (
 	"github.com/m3db/m3x/resource"
 
 	"github.com/stretchr/testify/assert"
+	xnetcontext "golang.org/x/net/context"
 )
 
 func TestRegisterFinalizer(t *testing.T) {
@@ -148,4 +149,29 @@ func testDependsOn(t *testing.T, c *ctx) {
 
 	// Ensure closed now.
 	assert.Equal(t, int32(1), atomic.LoadInt32(&closed))
+}
+
+func TestGoContext(t *testing.T) {
+	goCtx := xnetcontext.Background()
+	xCtx := NewContext().(*ctx)
+
+	var (
+		exists    bool
+		returnCtx xnetcontext.Context
+	)
+
+	returnCtx, exists = xCtx.GoContext()
+	assert.False(t, exists)
+	assert.Nil(t, returnCtx)
+
+	xCtx.SetGoContext(goCtx)
+
+	returnCtx, exists = xCtx.GoContext()
+	assert.True(t, exists)
+	assert.Equal(t, goCtx, returnCtx)
+
+	xCtx.Reset()
+	returnCtx, exists = xCtx.GoContext()
+	assert.False(t, exists)
+	assert.Nil(t, returnCtx)
 }

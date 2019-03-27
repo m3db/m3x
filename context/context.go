@@ -21,11 +21,10 @@
 package context
 
 import (
+	stdctx "context"
 	"sync"
 
 	"github.com/m3db/m3x/resource"
-
-	xnetcontext "golang.org/x/net/context"
 )
 
 // NB(r): using golang.org/x/net/context is too GC expensive.
@@ -33,7 +32,7 @@ import (
 type ctx struct {
 	sync.RWMutex
 
-	goCtx         xnetcontext.Context
+	goCtx         stdctx.Context
 	pool          contextPool
 	done          bool
 	wg            sync.WaitGroup
@@ -55,7 +54,7 @@ func newPooledContext(pool contextPool) Context {
 	return &ctx{pool: pool}
 }
 
-func (c *ctx) GoContext() (xnetcontext.Context, bool) {
+func (c *ctx) GoContext() (stdctx.Context, bool) {
 	if c.goCtx == nil {
 		return nil, false
 	}
@@ -63,7 +62,7 @@ func (c *ctx) GoContext() (xnetcontext.Context, bool) {
 	return c.goCtx, true
 }
 
-func (c *ctx) SetGoContext(v xnetcontext.Context) {
+func (c *ctx) SetGoContext(v stdctx.Context) {
 	c.goCtx = v
 }
 

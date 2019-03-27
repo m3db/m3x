@@ -21,6 +21,7 @@
 package context
 
 import (
+	stdctx "context"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -29,7 +30,6 @@ import (
 	"github.com/m3db/m3x/resource"
 
 	"github.com/stretchr/testify/assert"
-	xnetcontext "golang.org/x/net/context"
 )
 
 func TestRegisterFinalizer(t *testing.T) {
@@ -152,12 +152,12 @@ func testDependsOn(t *testing.T, c *ctx) {
 }
 
 func TestGoContext(t *testing.T) {
-	goCtx := xnetcontext.Background()
+	goCtx := stdctx.Background()
 	xCtx := NewContext().(*ctx)
 
 	var (
 		exists    bool
-		returnCtx xnetcontext.Context
+		returnCtx stdctx.Context
 	)
 
 	returnCtx, exists = xCtx.GoContext()

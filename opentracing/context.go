@@ -18,15 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package opentracingutil
+package opentracing
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/log"
-	"golang.org/x/net/context"
 )
 
 // alias GlobalTracer() so we can mock out the tracer without impacting tests outside the package
@@ -69,7 +69,8 @@ func StartSpanFromContext(ctx context.Context, operationName string, opts ...ope
 	return span, opentracing.ContextWithSpan(ctx, span)
 }
 
-// Time is a log.Field for time.Time values. It translates to RF3339 formatted time strings.
+// Time is a log.Field for time.Time values. It translates to RFC3339 formatted time strings.
+// (e.g. 2018-04-15T13:47:26+00:00)
 func Time(key string, t time.Time) log.Field {
 	return log.String(key, t.Format(time.RFC3339))
 }

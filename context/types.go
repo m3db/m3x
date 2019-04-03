@@ -71,6 +71,12 @@ type Context interface {
 
 	// SetGoContext sets the Go std context
 	SetGoContext(stdctx.Context)
+
+	// ParentCtx returns the parent context
+	ParentCtx() Context
+
+	// SetParentCtx sets the parent context
+	SetParentCtx(Context)
 }
 
 // Pool provides a pool for contexts.

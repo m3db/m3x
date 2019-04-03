@@ -53,6 +53,39 @@ func TestRegisterFinalizer(t *testing.T) {
 	assert.Equal(t, true, closed)
 }
 
+func TestChildCtx(t *testing.T) {
+	xCtx := NewContext().(*ctx)
+	assert.Nil(t, xCtx.ParentCtx())
+
+	childCtx := xCtx.NewChildContext().(*ctx)
+	assert.NotNil(t, childCtx.ParentCtx())
+
+	var (
+		wg           sync.WaitGroup
+		childClosed  = false
+		parentClosed = false
+	)
+
+	wg.Add(2)
+	childCtx.RegisterCloser(resource.CloserFn(func() {
+		childClosed = true
+		wg.Done()
+	}))
+
+	xCtx.RegisterCloser(resource.CloserFn(func() {
+		parentClosed = true
+		wg.Done()
+	}))
+
+	assert.Equal(t, 0, len(childCtx.finalizeables))
+
+	childCtx.Close()
+	wg.Wait()
+
+	// assert.Equal(t, false, childClosed)
+	assert.Equal(t, true, parentClosed)
+}
+
 func TestRegisterCloser(t *testing.T) {
 	var (
 		wg     sync.WaitGroup

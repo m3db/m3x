@@ -24,7 +24,10 @@ import (
 	stdctx "context"
 	"sync"
 
+	xopentracing "github.com/m3db/m3x/opentracing"
 	"github.com/m3db/m3x/resource"
+
+	"github.com/opentracing/opentracing-go"
 )
 
 // NB(r): using golang.org/x/net/context is too GC expensive.
@@ -37,6 +40,7 @@ type ctx struct {
 	done          bool
 	wg            sync.WaitGroup
 	finalizeables []finalizeable
+	parent        Context
 }
 
 type finalizeable struct {
@@ -67,6 +71,11 @@ func (c *ctx) SetGoContext(v stdctx.Context) {
 }
 
 func (c *ctx) IsClosed() bool {
+	parent := c.ParentCtx()
+	if parent == nil {
+		return parent.IsClosed()
+	}
+
 	c.RLock()
 	done := c.done
 	c.RUnlock()
@@ -75,10 +84,22 @@ func (c *ctx) IsClosed() bool {
 }
 
 func (c *ctx) RegisterFinalizer(f resource.Finalizer) {
+	parent := c.ParentCtx()
+	if parent != nil {
+		parent.RegisterFinalizer(f)
+		return
+	}
+
 	c.registerFinalizeable(finalizeable{finalizer: f})
 }
 
 func (c *ctx) RegisterCloser(f resource.Closer) {
+	parent := c.ParentCtx()
+	if parent != nil {
+		parent.RegisterCloser(f)
+		return
+	}
+
 	c.registerFinalizeable(finalizeable{closer: f})
 }
 
@@ -108,6 +129,12 @@ func allocateFinalizeables() []finalizeable {
 }
 
 func (c *ctx) DependsOn(blocker Context) {
+	parent := c.ParentCtx()
+	if parent != nil {
+		parent.DependsOn(blocker)
+		return
+	}
+
 	c.Lock()
 
 	if !c.done {
@@ -131,10 +158,22 @@ const (
 )
 
 func (c *ctx) Close() {
+	parent := c.ParentCtx()
+	if parent != nil {
+		parent.Close()
+		return
+	}
+
 	c.close(closeAsync)
 }
 
 func (c *ctx) BlockingClose() {
+	parent := c.ParentCtx()
+	if parent != nil {
+		parent.BlockingClose()
+		return
+	}
+
 	c.close(closeBlock)
 }
 
@@ -189,6 +228,12 @@ func (c *ctx) finalize(f []finalizeable) {
 }
 
 func (c *ctx) Reset() {
+	parent := c.ParentCtx()
+	if parent != nil {
+		parent.Reset()
+		return
+	}
+
 	c.Lock()
 	c.done, c.finalizeables, c.goCtx = false, nil, nil
 	c.Unlock()
@@ -201,4 +246,50 @@ func (c *ctx) returnToPool() {
 
 	c.Reset()
 	c.pool.Put(c)
+}
+
+func (c *ctx) NewChildContext() Context {
+	var child Context
+	if c.pool == nil {
+		child = NewContext()
+	} else {
+		child = c.pool.Get()
+	}
+
+	child.SetParentCtx(c)
+
+	return child
+}
+
+func (c *ctx) SetParentCtx(parentCtx Context) {
+	// check to see if parent exists?
+	c.parent = parentCtx
+}
+
+func (c *ctx) ParentCtx() Context {
+	c.RLock()
+	defer c.RUnlock()
+	return c.parent
+}
+
+func (c *ctx) StartSpan(name string) (Context, opentracing.Span, bool) {
+	goCtx, exists := c.GoContext()
+	if !exists {
+		return c, nil, false
+	}
+
+	// Figure this out
+	// jaegerctx, ok := goCtx.(jaeger.SpanContext) // figure out how to cast since it doesn't satisfy our ctx's interface
+	// if !ok {
+	// 	return c, nil, false
+	// }
+
+	// if !jaegerctx.Sampled() {
+	// 	return c, nil, false
+	// }
+
+	sp, spCtx := xopentracing.StartSpanFromContext(goCtx, name)
+	child := c.NewChildContext()
+	child.SetGoContext(spCtx)
+	return child, sp, true
 }

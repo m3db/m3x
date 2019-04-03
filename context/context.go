@@ -28,6 +28,7 @@ import (
 	"github.com/m3db/m3x/resource"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/uber/jaeger-client-go"
 )
 
 // NB(r): using golang.org/x/net/context is too GC expensive.
@@ -72,7 +73,7 @@ func (c *ctx) SetGoContext(v stdctx.Context) {
 
 func (c *ctx) IsClosed() bool {
 	parent := c.ParentCtx()
-	if parent == nil {
+	if parent != nil {
 		return parent.IsClosed()
 	}
 
@@ -160,6 +161,8 @@ const (
 func (c *ctx) Close() {
 	parent := c.ParentCtx()
 	if parent != nil {
+		c.returnToPool()
+		// should we close this? What if multiple children who share the same parent close this?
 		parent.Close()
 		return
 	}
@@ -170,6 +173,7 @@ func (c *ctx) Close() {
 func (c *ctx) BlockingClose() {
 	parent := c.ParentCtx()
 	if parent != nil {
+		c.returnToPool()
 		parent.BlockingClose()
 		return
 	}
@@ -278,17 +282,28 @@ func (c *ctx) StartSpan(name string) (Context, opentracing.Span, bool) {
 		return c, nil, false
 	}
 
-	// Figure this out
-	// jaegerctx, ok := goCtx.(jaeger.SpanContext) // figure out how to cast since it doesn't satisfy our ctx's interface
-	// if !ok {
-	// 	return c, nil, false
-	// }
+	var (
+		sp    opentracing.Span
+		spCtx stdctx.Context
+	)
 
-	// if !jaegerctx.Sampled() {
-	// 	return c, nil, false
-	// }
+	sp = opentracing.SpanFromContext(goCtx)
+	jaegerSpan, ok := sp.(*jaeger.Span)
+	if !ok {
+		return c, nil, false
+	}
 
-	sp, spCtx := xopentracing.StartSpanFromContext(goCtx, name)
+	jaegerCtx := jaegerSpan.Context()
+	spanCtx, ok := jaegerCtx.(*jaeger.SpanContext)
+	if !ok {
+		return c, nil, false
+	}
+
+	if !spanCtx.IsSampled() {
+		return c, nil, false
+	}
+
+	sp, spCtx = xopentracing.StartSpanFromContext(goCtx, name)
 	child := c.NewChildContext()
 	child.SetGoContext(spCtx)
 	return child, sp, true

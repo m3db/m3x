@@ -32,6 +32,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestRegisterFinalizerWithChild(t *testing.T) {
+	xCtx := NewContext().(*ctx)
+	assert.Nil(t, xCtx.ParentCtx())
+
+	childCtx := xCtx.NewChildContext().(*ctx)
+	assert.NotNil(t, childCtx.ParentCtx())
+
+	var (
+		wg          sync.WaitGroup
+		childClosed = false
+	)
+
+	wg.Add(1)
+	childCtx.RegisterFinalizer(resource.FinalizerFn(func() {
+		childClosed = true
+		wg.Done()
+	}))
+
+	assert.Equal(t, 0, len(childCtx.finalizeables))
+
+	childCtx.Close()
+	wg.Wait()
+
+	// validate closing childCtx, closes the parent
+	assert.True(t, xCtx.IsClosed())
+	assert.True(t, childClosed)
+}
+
 func TestRegisterFinalizer(t *testing.T) {
 	var (
 		wg     sync.WaitGroup
@@ -53,7 +81,7 @@ func TestRegisterFinalizer(t *testing.T) {
 	assert.Equal(t, true, closed)
 }
 
-func TestChildCtx(t *testing.T) {
+func TestRegisterCloserWithChild(t *testing.T) {
 	xCtx := NewContext().(*ctx)
 	assert.Nil(t, xCtx.ParentCtx())
 
@@ -61,19 +89,13 @@ func TestChildCtx(t *testing.T) {
 	assert.NotNil(t, childCtx.ParentCtx())
 
 	var (
-		wg           sync.WaitGroup
-		childClosed  = false
-		parentClosed = false
+		wg          sync.WaitGroup
+		childClosed = false
 	)
 
-	wg.Add(2)
+	wg.Add(1)
 	childCtx.RegisterCloser(resource.CloserFn(func() {
 		childClosed = true
-		wg.Done()
-	}))
-
-	xCtx.RegisterCloser(resource.CloserFn(func() {
-		parentClosed = true
 		wg.Done()
 	}))
 
@@ -82,8 +104,9 @@ func TestChildCtx(t *testing.T) {
 	childCtx.Close()
 	wg.Wait()
 
-	// assert.Equal(t, false, childClosed)
-	assert.Equal(t, true, parentClosed)
+	// validate closing childCtx, closes the parent
+	assert.True(t, xCtx.IsClosed())
+	assert.True(t, childClosed)
 }
 
 func TestRegisterCloser(t *testing.T) {
@@ -138,7 +161,7 @@ func TestDependsOnNoCloserAllocation(t *testing.T) {
 	assert.Nil(t, ctx.finalizeables)
 }
 
-func TestDependsOn(t *testing.T) {
+func TestDependsOnX(t *testing.T) {
 	ctx := NewContext().(*ctx)
 	testDependsOn(t, ctx)
 }
@@ -182,6 +205,42 @@ func testDependsOn(t *testing.T, c *ctx) {
 
 	// Ensure closed now.
 	assert.Equal(t, int32(1), atomic.LoadInt32(&closed))
+}
+
+func TestDependsOnWithChild(t *testing.T) {
+	var (
+		c     = NewContext().(*ctx)
+		child = c.NewChildContext().(*ctx)
+		other = NewContext().(*ctx)
+
+		wg     sync.WaitGroup
+		closed int32
+	)
+
+	wg.Add(1)
+	c.RegisterFinalizer(resource.FinalizerFn(func() {
+		atomic.AddInt32(&closed, 1)
+		wg.Done()
+	}))
+
+	child.DependsOn(other)
+	child.Close()
+
+	// Give some time for a bug to occur.
+	time.Sleep(100 * time.Millisecond)
+
+	// Ensure still not closed even though child ctx has been closed
+	assert.Equal(t, int32(0), atomic.LoadInt32(&closed))
+	assert.False(t, c.IsClosed())
+
+	// Now close the context ctx is dependent on.
+	other.BlockingClose()
+
+	wg.Wait()
+
+	// Ensure closed now.
+	assert.Equal(t, int32(1), atomic.LoadInt32(&closed))
+	assert.True(t, c.IsClosed())
 }
 
 func TestGoContext(t *testing.T) {

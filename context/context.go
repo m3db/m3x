@@ -243,7 +243,7 @@ func (c *ctx) Reset() {
 	}
 
 	c.Lock()
-	c.done, c.finalizeables, c.goCtx = false, nil, nil
+	c.done, c.finalizeables, c.goCtx, c.checkedAndNotSampled = false, nil, nil, false
 	c.Unlock()
 }
 

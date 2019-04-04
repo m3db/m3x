@@ -27,17 +27,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/opentracing/opentracing-go/mocktracer"
+
 	"github.com/m3db/m3x/resource"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRegisterFinalizerWithChild(t *testing.T) {
 	xCtx := NewContext().(*ctx)
-	assert.Nil(t, xCtx.ParentCtx())
+	assert.Nil(t, xCtx.parentCtx())
 
-	childCtx := xCtx.NewChildContext().(*ctx)
-	assert.NotNil(t, childCtx.ParentCtx())
+	childCtx := xCtx.newChildContext().(*ctx)
+	assert.NotNil(t, childCtx.parentCtx())
 
 	var (
 		wg          sync.WaitGroup
@@ -83,10 +86,10 @@ func TestRegisterFinalizer(t *testing.T) {
 
 func TestRegisterCloserWithChild(t *testing.T) {
 	xCtx := NewContext().(*ctx)
-	assert.Nil(t, xCtx.ParentCtx())
+	assert.Nil(t, xCtx.parentCtx())
 
-	childCtx := xCtx.NewChildContext().(*ctx)
-	assert.NotNil(t, childCtx.ParentCtx())
+	childCtx := xCtx.newChildContext().(*ctx)
+	assert.NotNil(t, childCtx.parentCtx())
 
 	var (
 		wg          sync.WaitGroup
@@ -210,7 +213,7 @@ func testDependsOn(t *testing.T, c *ctx) {
 func TestDependsOnWithChild(t *testing.T) {
 	var (
 		c     = NewContext().(*ctx)
-		child = c.NewChildContext().(*ctx)
+		child = c.newChildContext().(*ctx)
 		other = NewContext().(*ctx)
 
 		wg     sync.WaitGroup
@@ -240,6 +243,32 @@ func TestDependsOnWithChild(t *testing.T) {
 	// Ensure closed now.
 	assert.Equal(t, int32(1), atomic.LoadInt32(&closed))
 	assert.True(t, c.IsClosed())
+}
+
+func TestTraceSpan(t *testing.T) {
+	var (
+		xCtx  = NewContext()
+		goCtx = stdctx.Background()
+		sp    opentracing.Span
+		spCtx Context
+		ok    bool
+	)
+
+	// use a mock tracer to ensure sampling rate is set to 1.
+	mktr := mocktracer.New()
+	sp = mktr.StartSpan("test_op")
+	defer sp.Finish()
+
+	spGoCtx := opentracing.ContextWithSpan(goCtx, sp)
+
+	xCtx.SetGoContext(spGoCtx)
+	spCtx, sp, ok = xCtx.StartTraceSpan("test_op_2")
+	assert.True(t, ok)
+	assert.NotNil(t, sp)
+	defer sp.Finish()
+
+	childCtx := spCtx.(*ctx)
+	assert.NotNil(t, childCtx.parentCtx())
 }
 
 func TestGoContext(t *testing.T) {

@@ -27,11 +27,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opentracing/opentracing-go/mocktracer"
-
 	"github.com/m3db/m3x/resource"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
 )
 

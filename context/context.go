@@ -320,7 +320,7 @@ func (c *ctx) StartTraceSpan(name string) (Context, opentracing.Span, bool) {
 	sp = opentracing.SpanFromContext(goCtx)
 	if sp == nil {
 		sp, spCtx = xopentracing.StartSpanFromContext(goCtx, name)
-		if c.spanIsSampled(sp) == true {
+		if c.spanIsSampled(sp) {
 			child := c.newChildContext()
 			child.SetGoContext(spCtx)
 			return child, sp, true

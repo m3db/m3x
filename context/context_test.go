@@ -231,7 +231,6 @@ func TestDependsOnWithChild(t *testing.T) {
 
 	// Ensure still not closed even though child ctx has been closed
 	assert.Equal(t, int32(0), atomic.LoadInt32(&closed))
-	assert.False(t, c.IsClosed())
 
 	// Now close the context ctx is dependent on.
 	other.BlockingClose()

@@ -162,8 +162,10 @@ func (c *ctx) Close() {
 	parent := c.ParentCtx()
 	if parent != nil {
 		c.returnToPool()
-		// should we close this? What if multiple children who share the same parent close this?
-		parent.Close()
+		if !parent.IsClosed() {
+			parent.Close()
+		}
+
 		return
 	}
 
@@ -174,7 +176,10 @@ func (c *ctx) BlockingClose() {
 	parent := c.ParentCtx()
 	if parent != nil {
 		c.returnToPool()
-		parent.BlockingClose()
+		if !parent.IsClosed() {
+			parent.BlockingClose()
+		}
+
 		return
 	}
 

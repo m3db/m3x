@@ -163,7 +163,7 @@ func TestDependsOnNoCloserAllocation(t *testing.T) {
 	assert.Nil(t, ctx.finalizeables)
 }
 
-func TestDependsOnX(t *testing.T) {
+func TestDependsOn(t *testing.T) {
 	ctx := NewContext().(*ctx)
 	testDependsOn(t, ctx)
 }

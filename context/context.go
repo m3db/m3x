@@ -60,6 +60,11 @@ func newPooledContext(pool contextPool) Context {
 	return &ctx{pool: pool}
 }
 
+// newContext returns an empty ctx
+func newContext() *ctx {
+	return &ctx{}
+}
+
 func (c *ctx) GoContext() (stdctx.Context, bool) {
 	if c.goCtx == nil {
 		return nil, false
@@ -257,17 +262,19 @@ func (c *ctx) returnToPool() {
 }
 
 func (c *ctx) newChildContext() Context {
-	var child Context
-	if c.pool == nil {
-		child = NewContext()
-	} else {
-		child = c.pool.Get()
+	var childCtx *ctx
+	if c.pool != nil {
+		pooled, ok := c.pool.Get().(*ctx)
+		if ok {
+			childCtx = pooled
+		}
 	}
 
-	// is there a better way to do this?
-	childCtx := child.(*ctx)
-	childCtx.setParentCtx(c)
+	if childCtx == nil {
+		childCtx = newContext()
+	}
 
+	childCtx.setParentCtx(c)
 	return childCtx
 }
 
@@ -285,6 +292,8 @@ func (c *ctx) parentCtx() Context {
 	return parent
 }
 
+// Until OpenTracing supports the `IsSampled()` method, we need to cast to a Jaeger span.
+// See https://github.com/opentracing/specification/issues/92 for more information.
 func (c *ctx) spanIsSampled(sp opentracing.Span) bool {
 	jaegerSpan, ok := sp.(*jaeger.Span)
 	if !ok {
@@ -315,8 +324,6 @@ func (c *ctx) StartTraceSpan(name string) (Context, opentracing.Span, bool) {
 		spCtx stdctx.Context
 	)
 
-	// Until OpenTracing supports the `IsSampled()` method, we need to cast to a Jaeger span.
-	// See https://github.com/opentracing/specification/issues/92 for more information.
 	sp = opentracing.SpanFromContext(goCtx)
 	if sp == nil {
 		sp, spCtx = xopentracing.StartSpanFromContext(goCtx, name)

@@ -52,7 +52,7 @@ type finalizeable struct {
 
 // NewContext creates a new context.
 func NewContext() Context {
-	return newPooledContext(nil)
+	return newContext()
 }
 
 // NewPooledContext returns a new context that is returned to a pool when closed.

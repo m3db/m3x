@@ -1,4 +1,6 @@
-## WARNING: This is Alpha software and not intended for use until a stable release.
+Migration Warning
+=================
+This repository has been migrated to github.com/m3db/m3. It's contents can be found at github.com/m3db/m3/src/x. Follow along there for updates. This repository is marked archived, and will no longer receive any updates.
 
 # M3X [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
 

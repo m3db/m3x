@@ -126,17 +126,20 @@ func StartReportingExtendedMetrics(
 }
 
 type runtimeMetrics struct {
-	NumGoRoutines   tally.Gauge
-	GoMaxProcs      tally.Gauge
-	MemoryAllocated tally.Gauge
-	MemoryHeap      tally.Gauge
-	MemoryHeapIdle  tally.Gauge
-	MemoryHeapInuse tally.Gauge
-	MemoryStack     tally.Gauge
-	GCCPUFraction   tally.Gauge
-	NumGC           tally.Counter
-	GcPauseMs       tally.Timer
-	lastNumGC       uint32
+	NumGoRoutines     tally.Gauge
+	GoMaxProcs        tally.Gauge
+	MemoryAllocated   tally.Gauge
+	MemoryHeap        tally.Gauge
+	MemoryHeapIdle    tally.Gauge
+	MemoryHeapInuse   tally.Gauge
+	MemoryHeapObjects tally.Gauge
+	MemoryStack       tally.Gauge
+	GCCPUFraction     tally.Gauge
+	NumGC             tally.Counter
+	NextGC            tally.Gauge
+	PointerLookups    tally.Gauge
+	GcPauseMs         tally.Timer
+	lastNumGC         uint32
 }
 
 func (r *runtimeMetrics) report(metricsType ExtendedMetricsType) {
@@ -156,8 +159,11 @@ func (r *runtimeMetrics) report(metricsType ExtendedMetricsType) {
 	r.MemoryHeap.Update(float64(memStats.HeapAlloc))
 	r.MemoryHeapIdle.Update(float64(memStats.HeapIdle))
 	r.MemoryHeapInuse.Update(float64(memStats.HeapInuse))
+	r.MemoryHeapObjects.Update(float64(memStats.HeapObjects))
 	r.MemoryStack.Update(float64(memStats.StackInuse))
 	r.GCCPUFraction.Update(memStats.GCCPUFraction)
+	r.NextGC.Update(float64(memStats.NextGC))
+	r.PointerLookups.Update(float64(memStats.Lookups))
 
 	// memStats.NumGC is a perpetually incrementing counter (unless it wraps at 2^32).
 	num := memStats.NumGC
@@ -220,9 +226,12 @@ func NewExtendedMetricsReporter(
 	r.runtime.MemoryHeap = memoryScope.Gauge("heap")
 	r.runtime.MemoryHeapIdle = memoryScope.Gauge("heapidle")
 	r.runtime.MemoryHeapInuse = memoryScope.Gauge("heapinuse")
+	r.runtime.MemoryHeapObjects = memoryScope.Gauge("heapobjects")
 	r.runtime.MemoryStack = memoryScope.Gauge("stack")
 	r.runtime.GCCPUFraction = memoryScope.Gauge("gc-cpu-fraction")
 	r.runtime.NumGC = memoryScope.Counter("num-gc")
+	r.runtime.NextGC = memoryScope.Gauge("next-gc")
+	r.runtime.PointerLookups = memoryScope.Gauge("pointer-lookups")
 	r.runtime.GcPauseMs = memoryScope.Timer("gc-pause-ms")
 	r.runtime.lastNumGC = memstats.NumGC
 

@@ -121,3 +121,16 @@ func TestGoWithTimeout(t *testing.T) {
 
 	require.Equal(t, uint32(testWorkerPoolSize+1), count)
 }
+
+func TestInitOnInitializedWorkerPool(t *testing.T) {
+	p := NewWorkerPool(testWorkerPoolSize)
+	p.Init()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p.Go(func() {
+		p.Init()
+		wg.Done()
+	})
+	wg.Wait()
+}

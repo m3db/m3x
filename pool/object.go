@@ -52,13 +52,6 @@ type objectPool struct {
 	metrics             objectPoolMetrics
 }
 
-type objectPoolMetrics struct {
-	free       tally.Gauge
-	total      tally.Gauge
-	getOnEmpty tally.Counter
-	putOnFull  tally.Counter
-}
-
 // NewObjectPool creates a new pool
 func NewObjectPool(opts ObjectPoolOptions) ObjectPool {
 	if opts == nil {
@@ -75,12 +68,7 @@ func NewObjectPool(opts ObjectPoolOptions) ObjectPool {
 			opts.RefillLowWatermark() * float64(opts.Size()))),
 		refillHighWatermark: int(math.Ceil(
 			opts.RefillHighWatermark() * float64(opts.Size()))),
-		metrics: objectPoolMetrics{
-			free:       m.Gauge("free"),
-			total:      m.Gauge("total"),
-			getOnEmpty: m.Counter("get-on-empty"),
-			putOnFull:  m.Counter("put-on-full"),
-		},
+		metrics: newObjectPoolMetrics(m),
 	}
 
 	p.setGauges()
@@ -171,4 +159,20 @@ func (p *objectPool) tryFill() {
 			}
 		}
 	}()
+}
+
+func newObjectPoolMetrics(m tally.Scope) objectPoolMetrics {
+	return objectPoolMetrics{
+		free:       m.Gauge("free"),
+		total:      m.Gauge("total"),
+		getOnEmpty: m.Counter("get-on-empty"),
+		putOnFull:  m.Counter("put-on-full"),
+	}
+}
+
+type objectPoolMetrics struct {
+	free       tally.Gauge
+	total      tally.Gauge
+	getOnEmpty tally.Counter
+	putOnFull  tally.Counter
 }
